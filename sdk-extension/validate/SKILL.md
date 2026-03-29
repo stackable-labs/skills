@@ -14,7 +14,7 @@ Read `packages/extension/public/manifest.json` and verify:
 - [ ] `name` is a non-empty string
 - [ ] `version` follows semver (e.g., "1.0.0")
 - [ ] `targets` is a non-empty array of valid target strings (slot.header, slot.content, slot.footer, slot.footer-links)
-- [ ] `permissions` contains only valid permission strings (context:read, data:query, data:fetch, actions:toast, actions:invoke)
+- [ ] `permissions` contains only valid permission strings (context:read, data:query, data:fetch, actions:toast, actions:invoke, identity:read, identity:subscribe, identity:extend)
 - [ ] `allowedDomains` is an array (can be empty if data:fetch is not used)
 - [ ] If `data:fetch` permission is declared, `allowedDomains` is not empty
 
