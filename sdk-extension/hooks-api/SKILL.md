@@ -38,7 +38,7 @@ const capabilities = useCapabilities()
 // capabilities.data.fetch(url, init?)
 // capabilities.actions.toast(payload)
 // capabilities.actions.invoke(action, payload?)
-// capabilities.extend.identity(payload) — enrich identity claims (prefer useIdentityExtend hook)
+// capabilities.extend.identity(payload) — enrich identity claims (prefer useExtendIdentity hook)
 ```
 
 ## useStore(store, selector?)
@@ -89,13 +89,27 @@ useIdentityEvent('identity.login', (event) => {
 })
 ```
 
-## useIdentityExtend(handler)
+## useMessagingEvent(eventType, handler)
+Subscribe to messaging events (e.g. postback button clicks) pushed from the host widget. Requires `events:messaging` permission and matching entries in manifest `events` array.
+- `eventType: 'postback' | 'postback:<actionName>'`
+- `handler: (event: MessagingEvent) => void`
+- `MessagingPostbackEvent: { type: 'postback', actionName: string, conversationId: string, timestamp: string }`
+- `'postback'` receives ALL postback events (requires elevated marketplace review)
+- `'postback:<actionName>'` receives only events matching the specific actionName
+
+```tsx
+useMessagingEvent('postback:add_to_cart', (event) => {
+  console.log('Add to cart:', event.actionName, event.conversationId)
+})
+```
+
+## useExtendIdentity(handler)
 Register a handler to enrich identity JWT claims before signing. Requires `extend:identity` permission.
 - `handler: (claims: IdentityBaseClaims) => Record<string, unknown> | Promise<Record<string, unknown>>`
 - `IdentityBaseClaims: { external_id: string, email?: string, name?: string, [key: string]: unknown }`
 
 ```tsx
-useIdentityExtend((claims) => ({
+useExtendIdentity((claims) => ({
   external_id: `shopify_${claims.external_id}`,
 }))
 ```

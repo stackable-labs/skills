@@ -14,8 +14,9 @@ Ask which capability to add. Valid capabilities:
 - `context.read` — read host-provided context (customerId, customerEmail, etc.)
 - `actions.toast` — show toast notifications (success, error, info, warning)
 - `actions.invoke` — invoke host actions (e.g., open new conversation)
-- `events:identity` — subscribe to identity events (login, logout, refresh, expired)
 - `extend:identity` — enrich identity JWT claims before signing
+- `events:identity` — subscribe to identity events (login, logout, refresh, expired)
+- `events:messaging` — subscribe to messaging events (postback button clicks)
 
 ## 2. Add permission to manifest.json
 Add the corresponding permission to `packages/extension/public/manifest.json`:
@@ -24,8 +25,9 @@ Add the corresponding permission to `packages/extension/public/manifest.json`:
 - `context.read` → `"context:read"`
 - `actions.toast` → `"actions:toast"`
 - `actions.invoke` → `"actions:invoke"`
-- `events:identity` → `"events:identity"` (also add entries to `events` array, e.g. `["identity.login", "identity.logout"]`)
 - `extend:identity` → `"extend:identity"`
+- `events:identity` → `"events:identity"` (also add entries to `events` array, e.g. `["identity.login", "identity.logout"]`)
+- `events:messaging` → `"events:messaging"` (also add entries to `events` array, e.g. `["postback:add_to_cart"]`)
 
 Only add if not already declared.
 
@@ -59,8 +61,9 @@ const capabilities = useCapabilities()
 // context.read: capabilities.context.read()  (or use useContextData() hook)
 // actions.toast: capabilities.actions.toast({ message: 'Done!', type: 'success' })
 // actions.invoke: capabilities.actions.invoke('actionName', { ... })
+// extend:identity: useExtendIdentity((claims) => ({ ...additionalClaims }))
 // events:identity: useIdentityEvent('identity.login', (event) => { ... })
-// extend:identity: useIdentityExtend((claims) => ({ ...additionalClaims }))
+// events:messaging: useMessagingEvent('postback:add_to_cart', (event) => { ... })
 ```
 
 ## 6. Verify

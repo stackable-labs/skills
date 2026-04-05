@@ -14,7 +14,7 @@ Read `packages/extension/public/manifest.json` and verify:
 - [ ] `name` is a non-empty string
 - [ ] `version` follows semver (e.g., "1.0.0")
 - [ ] `targets` is a non-empty array of valid target strings (slot.header, slot.content, slot.footer, slot.footer-links)
-- [ ] `permissions` contains only valid permission strings (context:read, data:query, data:fetch, actions:toast, actions:invoke, events:identity, extend:identity)
+- [ ] `permissions` contains only valid permission strings (context:read, data:query, data:fetch, actions:toast, actions:invoke, events:identity, events:messaging, extend:identity)
 - [ ] `allowedDomains` is an array (can be empty if data:fetch is not used)
 - [ ] If `data:fetch` permission is declared, `allowedDomains` is not empty
 
@@ -25,8 +25,9 @@ Scan all `.tsx` files in `packages/extension/src/` for capability usage:
 - `capabilities.context.read` or `useContextData` → needs `context:read` permission
 - `capabilities.actions.toast` → needs `actions:toast` permission
 - `capabilities.actions.invoke` → needs `actions:invoke` permission
+- `useExtendIdentity` → needs `extend:identity` permission
 - `useIdentityEvent` → needs `events:identity` permission (also check manifest `events` array has matching entries)
-- `useIdentityExtend` → needs `extend:identity` permission
+- `useMessagingEvent` → needs `events:messaging` permission (also check manifest `events` array has matching entries)
 
 Report:
 - **Missing permissions:** capabilities used in code but not declared in manifest

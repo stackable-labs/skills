@@ -99,10 +99,32 @@ useIdentityEvent('identity.login', (event) => {
 
 **Note:** Identity state is also available via `context.read()` → `identity` field (requires `context:read`, no separate permission needed).
 
+## events:messaging — Messaging Event Subscription
+Subscribe to messaging events (e.g. postback button clicks) pushed from the host widget.
+- **Permission required:** `events:messaging`
+- **Manifest events array:** Declare specific events to listen for (e.g. `["postback:add_to_cart"]`) or `"postback"` for all postbacks (requires elevated marketplace review)
+- **Hook:** `useMessagingEvent(eventType, handler)`
+- **Event types:** `'postback'` (all postbacks) or `'postback:<actionName>'` (specific postback)
+
+```json
+{
+  "permissions": ["events:messaging"],
+  "events": ["postback:add_to_cart", "postback:check_order"]
+}
+```
+
+```tsx
+import { useMessagingEvent } from '@stackable-labs/sdk-extension-react'
+
+useMessagingEvent('postback:add_to_cart', (event) => {
+  console.log('Add to cart:', event.actionName, event.conversationId)
+})
+```
+
 ## extend:identity — Identity Claim Enrichment
 Enrich identity JWT claims before signing. The host sends base claims to your extension, and you return additional claims to merge into the token.
 - **Permission required:** `extend:identity`
-- **Hook:** `useIdentityExtend(handler)`
+- **Hook:** `useExtendIdentity(handler)`
 - **Handler signature:** `(claims: IdentityBaseClaims) => Record<string, unknown> | Promise<Record<string, unknown>>`
 - **IdentityBaseClaims:** `{ external_id: string, email?: string, name?: string, [key: string]: unknown }`
 
@@ -113,9 +135,9 @@ Enrich identity JWT claims before signing. The host sends base claims to your ex
 ```
 
 ```tsx
-import { useIdentityExtend } from '@stackable-labs/sdk-extension-react'
+import { useExtendIdentity } from '@stackable-labs/sdk-extension-react'
 
-useIdentityExtend((claims) => ({
+useExtendIdentity((claims) => ({
   external_id: `shopify_${claims.external_id}`,
   loyalty_tier: 'gold',
 }))
