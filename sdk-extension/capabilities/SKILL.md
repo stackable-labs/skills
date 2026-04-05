@@ -103,7 +103,7 @@ useIdentityEvent('identity.login', (event) => {
 Subscribe to messaging events (e.g. postback button clicks) pushed from the host widget.
 - **Permission required:** `events:messaging`
 - **Manifest events array:** Declare specific events to listen for (e.g. `["postback:add_to_cart"]`) or `"postback"` for all postbacks (requires elevated marketplace review)
-- **Hook:** `useMessagingEvent(eventType, handler)`
+- **Hook:** `useMessagingEvent(eventType, handler)` — `MessagingEventHandler` type exported for use with `useCallback`
 - **Event types:** `'postback'` (all postbacks) or `'postback:<actionName>'` (specific postback)
 
 ```json
@@ -124,7 +124,7 @@ useMessagingEvent('postback:add_to_cart', (event) => {
 ## extend:identity — Identity Claim Enrichment
 Enrich identity JWT claims before signing. The host sends base claims to your extension, and you return additional claims to merge into the token.
 - **Permission required:** `extend:identity`
-- **Hook:** `useExtendIdentity(handler)`
+- **Hook:** `useExtendIdentity(handler)` — `ExtendIdentityHandler` type exported for use with `useCallback`
 - **Handler signature:** `(claims: IdentityBaseClaims) => Record<string, unknown> | Promise<Record<string, unknown>>`
 - **IdentityBaseClaims:** `{ external_id: string, email?: string, name?: string, [key: string]: unknown }`
 

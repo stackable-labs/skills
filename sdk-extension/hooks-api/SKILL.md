@@ -92,7 +92,7 @@ useIdentityEvent('identity.login', (event) => {
 ## useMessagingEvent(eventType, handler)
 Subscribe to messaging events (e.g. postback button clicks) pushed from the host widget. Requires `events:messaging` permission and matching entries in manifest `events` array.
 - `eventType: 'postback' | 'postback:<actionName>'`
-- `handler: (event: MessagingEvent) => void`
+- `handler: MessagingEventHandler` — `(event: MessagingEvent) => void`
 - `MessagingPostbackEvent: { type: 'postback', actionName: string, conversationId: string, timestamp: string }`
 - `'postback'` receives ALL postback events (requires elevated marketplace review)
 - `'postback:<actionName>'` receives only events matching the specific actionName
@@ -103,15 +103,39 @@ useMessagingEvent('postback:add_to_cart', (event) => {
 })
 ```
 
+With `useCallback` (for memoized handlers):
+```tsx
+import { useCallback } from 'react'
+import { useMessagingEvent } from '@stackable-labs/sdk-extension-react'
+import type { MessagingEventHandler } from '@stackable-labs/sdk-extension-contracts'
+
+const handlePostback = useCallback<MessagingEventHandler>((event) => {
+  console.log('Add to cart:', event.actionName, event.conversationId)
+}, [])
+useMessagingEvent('postback:add_to_cart', handlePostback)
+```
+
 ## useExtendIdentity(handler)
 Register a handler to enrich identity JWT claims before signing. Requires `extend:identity` permission.
-- `handler: (claims: IdentityBaseClaims) => Record<string, unknown> | Promise<Record<string, unknown>>`
+- `handler: ExtendIdentityHandler` — `(claims: IdentityBaseClaims) => Record<string, unknown> | Promise<Record<string, unknown>>`
 - `IdentityBaseClaims: { external_id: string, email?: string, name?: string, [key: string]: unknown }`
 
 ```tsx
 useExtendIdentity((claims) => ({
   external_id: `shopify_${claims.external_id}`,
 }))
+```
+
+With `useCallback` (for memoized handlers):
+```tsx
+import { useCallback } from 'react'
+import { useExtendIdentity } from '@stackable-labs/sdk-extension-react'
+import type { ExtendIdentityHandler } from '@stackable-labs/sdk-extension-contracts'
+
+const handleExtend = useCallback<ExtendIdentityHandler>((claims) => ({
+  external_id: `shopify_${claims.external_id}`,
+}), [])
+useExtendIdentity(handleExtend)
 ```
 
 ## Identity via context.read()
