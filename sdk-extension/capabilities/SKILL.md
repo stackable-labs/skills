@@ -105,11 +105,13 @@ Subscribe to messaging events (e.g. postback button clicks) pushed from the host
 - **Manifest events array:** Declare specific events to listen for (e.g. `["postback:add_to_cart"]`) or `"postback"` for all postbacks (requires elevated marketplace review)
 - **Hook:** `useMessagingEvent(eventType, handler)` — `MessagingEventHandler` type exported for use with `useCallback`
 - **Event types:** `'postback'` (all postbacks) or `'postback:<actionName>'` (specific postback)
+- **Important:** Only `postback`-type buttons fire this event. The Zendesk bot builder's "Present options" creates `reply`-type buttons (no event). Use the Sunshine Conversations API with `{ "type": "postback", "text": "Button Label", "payload": "..." }` actions to create postback buttons.
+- **actionName caveat:** The `actionName` in the event is the button's display **text** (e.g. `"Add to cart"`), NOT the postback `payload` string. The payload is not exposed by the Zendesk Web Widget. Design manifest `events` entries to match button text: `"postback:Add to cart"`.
 
 ```json
 {
   "permissions": ["events:messaging"],
-  "events": ["postback:add_to_cart", "postback:check_order"]
+  "events": ["postback:Add to cart", "postback:Check order"]
 }
 ```
 
