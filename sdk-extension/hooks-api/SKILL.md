@@ -33,11 +33,12 @@ Wraps content for a target slot. The `id` must match a target in `manifest.json`
 Returns the capabilities object for calling host-mediated APIs.
 ```tsx
 const capabilities = useCapabilities()
+// capabilities.context.read()          — includes identity state in response
 // capabilities.data.query(payload)
 // capabilities.data.fetch(url, init?)
-// capabilities.context.read()
 // capabilities.actions.toast(payload)
 // capabilities.actions.invoke(action, payload?)
+// capabilities.extend.identity(payload) — enrich identity claims (prefer useIdentityExtend hook)
 ```
 
 ## useStore(store, selector?)
@@ -74,3 +75,34 @@ const appStore = createStore<AppState>({ viewState: { type: 'menu' } })
 - `get(): T` — read current state
 - `set(partial: Partial<T>): void` — merge partial state update
 - `subscribe(listener: (state: T) => void): () => void` — subscribe, returns unsubscribe fn
+
+## useIdentityEvent(eventType, handler)
+Subscribe to identity events pushed from the host. Requires `events:identity` permission and matching entries in manifest `events` array.
+- `eventType: 'identity.login' | 'identity.logout' | 'identity.refresh' | 'identity.expired'`
+- `handler: (event: IdentityEvent) => void`
+- `IdentityEvent: { type: IdentityEventType, state: IdentityState, timestamp: string }`
+- `IdentityState: { authenticated: boolean, user: UserIdentity | null, expiresAt?: string }`
+
+```tsx
+useIdentityEvent('identity.login', (event) => {
+  console.log('Logged in:', event.state.user?.email)
+})
+```
+
+## useIdentityExtend(handler)
+Register a handler to enrich identity JWT claims before signing. Requires `extend:identity` permission.
+- `handler: (claims: IdentityBaseClaims) => Record<string, unknown> | Promise<Record<string, unknown>>`
+- `IdentityBaseClaims: { external_id: string, email?: string, name?: string, [key: string]: unknown }`
+
+```tsx
+useIdentityExtend((claims) => ({
+  external_id: `shopify_${claims.external_id}`,
+}))
+```
+
+## Identity via context.read()
+Identity state is available in the `context.read()` response as an `identity` field. Requires `context:read` permission (no separate identity permission needed).
+```tsx
+const context = await capabilities.context.read()
+// context.identity — { authenticated, user, expiresAt? }
+```

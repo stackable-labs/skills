@@ -74,3 +74,49 @@ Trigger host-defined actions (e.g., open a new conversation).
 ```tsx
 await capabilities.actions.invoke('newConversation', { subject: 'Follow-up' })
 ```
+
+## events:identity — Identity Event Subscription
+Subscribe to real-time identity events (login, logout, refresh, expired) pushed from the host.
+- **Permission required:** `events:identity`
+- **Manifest events array:** Declare specific events to listen for (e.g. `["identity.login", "identity.logout"]`)
+- **Hook:** `useIdentityEvent(eventType, handler)`
+- **Event types:** `'identity.login' | 'identity.logout' | 'identity.refresh' | 'identity.expired'`
+
+```json
+{
+  "permissions": ["events:identity"],
+  "events": ["identity.login", "identity.logout"]
+}
+```
+
+```tsx
+import { useIdentityEvent } from '@stackable-labs/sdk-extension-react'
+
+useIdentityEvent('identity.login', (event) => {
+  console.log('User logged in:', event.state.user?.email)
+})
+```
+
+**Note:** Identity state is also available via `context.read()` → `identity` field (requires `context:read`, no separate permission needed).
+
+## extend:identity — Identity Claim Enrichment
+Enrich identity JWT claims before signing. The host sends base claims to your extension, and you return additional claims to merge into the token.
+- **Permission required:** `extend:identity`
+- **Hook:** `useIdentityExtend(handler)`
+- **Handler signature:** `(claims: IdentityBaseClaims) => Record<string, unknown> | Promise<Record<string, unknown>>`
+- **IdentityBaseClaims:** `{ external_id: string, email?: string, name?: string, [key: string]: unknown }`
+
+```json
+{
+  "permissions": ["extend:identity"]
+}
+```
+
+```tsx
+import { useIdentityExtend } from '@stackable-labs/sdk-extension-react'
+
+useIdentityExtend((claims) => ({
+  external_id: `shopify_${claims.external_id}`,
+  loyalty_tier: 'gold',
+}))
+```

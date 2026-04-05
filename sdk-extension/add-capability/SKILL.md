@@ -14,6 +14,8 @@ Ask which capability to add. Valid capabilities:
 - `context.read` — read host-provided context (customerId, customerEmail, etc.)
 - `actions.toast` — show toast notifications (success, error, info, warning)
 - `actions.invoke` — invoke host actions (e.g., open new conversation)
+- `events:identity` — subscribe to identity events (login, logout, refresh, expired)
+- `extend:identity` — enrich identity JWT claims before signing
 
 ## 2. Add permission to manifest.json
 Add the corresponding permission to `packages/extension/public/manifest.json`:
@@ -22,8 +24,12 @@ Add the corresponding permission to `packages/extension/public/manifest.json`:
 - `context.read` → `"context:read"`
 - `actions.toast` → `"actions:toast"`
 - `actions.invoke` → `"actions:invoke"`
+- `events:identity` → `"events:identity"` (also add entries to `events` array, e.g. `["identity.login", "identity.logout"]`)
+- `extend:identity` → `"extend:identity"`
 
 Only add if not already declared.
+
+**Note:** Identity state is available via `context.read()` → `identity` field (requires `context:read`, no separate permission).
 
 ## 3. If data.fetch — add allowedDomains
 Ask for the API domain(s) and add them to the `allowedDomains` array in manifest.json.
@@ -53,6 +59,8 @@ const capabilities = useCapabilities()
 // context.read: capabilities.context.read()  (or use useContextData() hook)
 // actions.toast: capabilities.actions.toast({ message: 'Done!', type: 'success' })
 // actions.invoke: capabilities.actions.invoke('actionName', { ... })
+// events:identity: useIdentityEvent('identity.login', (event) => { ... })
+// extend:identity: useIdentityExtend((claims) => ({ ...additionalClaims }))
 ```
 
 ## 6. Verify
