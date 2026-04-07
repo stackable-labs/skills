@@ -67,13 +67,33 @@ capabilities.actions.toast({ message: 'Saved!', type: 'success' })
 ```
 
 ## actions.invoke — Invoke Host Actions
-Trigger host-defined actions (e.g., open a new conversation).
+Trigger host-defined actions (e.g., open a new conversation, set conversation tags/fields).
 - **Permission required:** `actions:invoke`
 - **Usage:** `capabilities.actions.invoke<T>(action: string, payload?: Record<string, unknown>): Promise<T>`
+- **Available actions:**
+  - `'newConversation'` — start a new Zendesk conversation (optionally with tags/fields)
+  - `'setConversationTags'` — set tags on the current/next conversation
+  - `'setConversationFields'` — set custom fields on the current/next conversation
+  - `'open'` / `'close'` / `'show'` / `'hide'` — control the Zendesk messenger widget
 
 ```tsx
-await capabilities.actions.invoke('newConversation', { subject: 'Follow-up' })
+// New conversation with tags and fields
+await capabilities.actions.invoke('newConversation', {
+  tags: ['stackable', 'order-lookup'],
+  fields: [{ id: 'stackable_action', value: 'order_status' }],
+  metadata: { orderId: '12345' },
+})
+
+// Standalone: set tags on current/next conversation
+await capabilities.actions.invoke('setConversationTags', ['escalated', 'order-issue'])
+
+// Standalone: set custom fields
+await capabilities.actions.invoke('setConversationFields', [
+  { id: 'order_status', value: 'shipped' },
+])
 ```
+
+**Zendesk constraints:** Tags max 20, auto-lowercased/sanitized. Fields require `web_widget_conversation_ticket_metadata` feature flag. Both `conversationTags` and `conversationFields` **replace** on each call (not additive).
 
 ## events:identity — Identity Event Subscription
 Subscribe to real-time identity events (login, logout, refresh, expired) pushed from the host.

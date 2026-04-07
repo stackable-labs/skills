@@ -37,7 +37,7 @@ const capabilities = useCapabilities()
 // capabilities.data.query(payload)
 // capabilities.data.fetch(url, init?)
 // capabilities.actions.toast(payload)
-// capabilities.actions.invoke(action, payload?)
+// capabilities.actions.invoke(action, payload?) — actions: newConversation, setConversationTags, setConversationFields, open, close, show, hide
 // capabilities.extend.identity(payload) — enrich identity claims (prefer useExtendIdentity hook)
 ```
 
