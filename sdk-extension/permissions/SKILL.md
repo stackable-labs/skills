@@ -7,7 +7,7 @@ description: "Permission strings, capability-to-permission mapping, and target c
 
 Declare permissions in `manifest.json` before using the corresponding capability.
 
-## Available Permissions (8)
+## Available Permissions (9)
 
 - `context:read`
 - `data:query`
@@ -16,6 +16,7 @@ Declare permissions in `manifest.json` before using the corresponding capability
 - `actions:invoke`
 - `events:identity`
 - `events:messaging`
+- `events:activity`
 - `extend:identity`
 
 ## Capability → Permission Mapping

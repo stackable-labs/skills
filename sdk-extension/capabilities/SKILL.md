@@ -78,22 +78,22 @@ await capabilities.actions.invoke('newConversation', { subject: 'Follow-up' })
 ## events:identity — Identity Event Subscription
 Subscribe to real-time identity events (login, logout, refresh, expired) pushed from the host.
 - **Permission required:** `events:identity`
-- **Manifest events array:** Declare specific events to listen for (e.g. `["identity.login", "identity.logout"]`)
+- **Manifest events array:** Declare specific events to listen for (e.g. `["identity:login", "identity:logout"]`)
 - **Hook:** `useIdentityEvent(eventType, handler)`
-- **Event types:** `'identity.login' | 'identity.logout' | 'identity.refresh' | 'identity.expired'`
+- **Event types:** `'login' | 'logout' | 'refresh' | 'expired'`
 
 ```json
 {
   "permissions": ["events:identity"],
-  "events": ["identity.login", "identity.logout"]
+  "events": ["identity:login", "identity:logout"]
 }
 ```
 
 ```tsx
 import { useIdentityEvent } from '@stackable-labs/sdk-extension-react'
 
-useIdentityEvent('identity.login', (event) => {
-  console.log('User logged in:', event.state.user?.email)
+useIdentityEvent('login', (event) => {
+  console.log('User logged in:', event.data.state.user?.email)
 })
 ```
 
@@ -102,16 +102,16 @@ useIdentityEvent('identity.login', (event) => {
 ## events:messaging — Messaging Event Subscription
 Subscribe to messaging events (e.g. postback button clicks) pushed from the host widget.
 - **Permission required:** `events:messaging`
-- **Manifest events array:** Declare specific events to listen for (e.g. `["postback:add_to_cart"]`) or `"postback"` for all postbacks (requires elevated marketplace review)
+- **Manifest events array:** Declare specific events to listen for (e.g. `["messaging:postback:add_to_cart"]`) or `"messaging:postback"` for all postbacks (requires elevated marketplace review)
 - **Hook:** `useMessagingEvent(eventType, handler)` — `MessagingEventHandler` type exported for use with `useCallback`
 - **Event types:** `'postback'` (all postbacks) or `'postback:<actionName>'` (specific postback)
 - **Important:** Only `postback`-type buttons fire this event. The Zendesk bot builder's "Present options" creates `reply`-type buttons (no event). Use the Sunshine Conversations API with `{ "type": "postback", "text": "Button Label", "payload": "..." }` actions to create postback buttons.
-- **actionName caveat:** The `actionName` in the event is the button's display **text** (e.g. `"Add to cart"`), NOT the postback `payload` string. The payload is not exposed by the Zendesk Web Widget. Design manifest `events` entries to match button text: `"postback:Add to cart"`.
+- **actionName caveat:** The `actionName` in the event is the button's display **text** (e.g. `"Add to cart"`), NOT the postback `payload` string. The payload is not exposed by the Zendesk Web Widget. Design manifest `events` entries to match button text: `"messaging:postback:Add to cart"`.
 
 ```json
 {
   "permissions": ["events:messaging"],
-  "events": ["postback:Add to cart", "postback:Check order"]
+  "events": ["messaging:postback:Add to cart", "messaging:postback:Check order"]
 }
 ```
 
@@ -119,9 +119,46 @@ Subscribe to messaging events (e.g. postback button clicks) pushed from the host
 import { useMessagingEvent } from '@stackable-labs/sdk-extension-react'
 
 useMessagingEvent('postback:add_to_cart', (event) => {
-  console.log('Add to cart:', event.actionName, event.conversationId)
+  console.log('Add to cart:', event.data.actionName, event.data.conversationId)
 })
 ```
+
+## events:activity — Activity Event Subscription
+Subscribe to host activity events (e.g. page views, clicks, purchases) pushed from the host application.
+- **Permission required:** `events:activity`
+- **Manifest events array:** Declare specific events to listen for (e.g. `["activity:product_view", "activity:add_to_cart"]`) — manifest uses fully-qualified strings
+- **Hook:** `useActivityEvent(eventType, handler)` — `ActivityEventHandler` type exported for use with `useCallback`
+- **Event types (domain-stripped):** `'page_view' | 'click' | 'product_view' | 'add_to_cart' | 'purchase' | 'search' | 'form_submit' | '*'`
+- **Well-known event names:**
+
+| Event | Example payload fields |
+|---|---|
+| `page_view` | `{ url, title, referrer }` |
+| `click` | `{ elementId, elementText, url }` |
+| `product_view` | `{ productId, productName, price }` |
+| `add_to_cart` | `{ productId, quantity, price }` |
+| `purchase` | `{ orderId, total, currency, items }` |
+| `search` | `{ query, resultCount }` |
+| `form_submit` | `{ formId, formName, fields }` |
+
+- `'*'` receives ALL activity events
+
+```json
+{
+  "permissions": ["events:activity"],
+  "events": ["activity:product_view", "activity:add_to_cart"]
+}
+```
+
+```tsx
+import { useActivityEvent } from '@stackable-labs/sdk-extension-react'
+
+useActivityEvent('product_view', (event) => {
+  console.log('Product:', event.data.productId)
+})
+```
+
+**Generic alternative:** `useEvent('activity:product_view', handler)` — a cross-domain hook that accepts fully-qualified event types. Domain wildcard (e.g., `'activity'`) receives all events in that domain.
 
 ## extend:identity — Identity Claim Enrichment
 Enrich identity JWT claims before signing. The host sends base claims to your extension, and you return additional claims to merge into the token.

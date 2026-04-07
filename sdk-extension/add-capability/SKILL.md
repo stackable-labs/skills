@@ -17,6 +17,7 @@ Ask which capability to add. Valid capabilities:
 - `extend:identity` — enrich identity JWT claims before signing
 - `events:identity` — subscribe to identity events (login, logout, refresh, expired)
 - `events:messaging` — subscribe to messaging events (postback button clicks)
+- `events:activity` — subscribe to activity events (page views, clicks, purchases)
 
 ## 2. Add permission to manifest.json
 Add the corresponding permission to `packages/extension/public/manifest.json`:
@@ -26,8 +27,9 @@ Add the corresponding permission to `packages/extension/public/manifest.json`:
 - `actions.toast` → `"actions:toast"`
 - `actions.invoke` → `"actions:invoke"`
 - `extend:identity` → `"extend:identity"`
-- `events:identity` → `"events:identity"` (also add entries to `events` array, e.g. `["identity.login", "identity.logout"]`)
-- `events:messaging` → `"events:messaging"` (also add entries to `events` array, e.g. `["postback:add_to_cart"]`)
+- `events:identity` → `"events:identity"` (also add entries to `events` array, e.g. `["identity:login", "identity:logout"]`)
+- `events:messaging` → `"events:messaging"` (also add entries to `events` array, e.g. `["messaging:postback:add_to_cart"]`)
+- `events:activity` → `"events:activity"` (also add entries to `events` array, e.g. `["activity:product_view"]`)
 
 Only add if not already declared.
 
@@ -62,8 +64,9 @@ const capabilities = useCapabilities()
 // actions.toast: capabilities.actions.toast({ message: 'Done!', type: 'success' })
 // actions.invoke: capabilities.actions.invoke('actionName', { ... })
 // extend:identity: useExtendIdentity((claims) => ({ ...additionalClaims }))
-// events:identity: useIdentityEvent('identity.login', (event) => { ... })
+// events:identity: useIdentityEvent('login', (event) => { ... })
 // events:messaging: useMessagingEvent('postback:add_to_cart', (event) => { ... })
+// events:activity: useActivityEvent('product_view', (event) => { ... })
 ```
 
 ## 6. Verify

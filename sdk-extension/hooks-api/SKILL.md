@@ -78,14 +78,14 @@ const appStore = createStore<AppState>({ viewState: { type: 'menu' } })
 
 ## useIdentityEvent(eventType, handler)
 Subscribe to identity events pushed from the host. Requires `events:identity` permission and matching entries in manifest `events` array.
-- `eventType: 'identity.login' | 'identity.logout' | 'identity.refresh' | 'identity.expired'`
+- `eventType: 'login' | 'logout' | 'refresh' | 'expired'`
 - `handler: (event: IdentityEvent) => void`
-- `IdentityEvent: { type: IdentityEventType, state: IdentityState, timestamp: string }`
+- `IdentityEvent: { eventName: IdentityEventType, data: { state: IdentityState, timestamp: string } }`
 - `IdentityState: { authenticated: boolean, user: UserIdentity | null, expiresAt?: string }`
 
 ```tsx
-useIdentityEvent('identity.login', (event) => {
-  console.log('Logged in:', event.state.user?.email)
+useIdentityEvent('login', (event) => {
+  console.log('Logged in:', event.data.state.user?.email)
 })
 ```
 
@@ -93,13 +93,13 @@ useIdentityEvent('identity.login', (event) => {
 Subscribe to messaging events (e.g. postback button clicks) pushed from the host widget. Requires `events:messaging` permission and matching entries in manifest `events` array.
 - `eventType: 'postback' | 'postback:<actionName>'`
 - `handler: MessagingEventHandler` — `(event: MessagingEvent) => void`
-- `MessagingPostbackEvent: { type: 'postback', actionName: string, conversationId: string, timestamp: string }`
+- `MessagingPostbackEvent: { eventName: 'postback', data: { actionName: string, conversationId: string, timestamp: string } }`
 - `'postback'` receives ALL postback events (requires elevated marketplace review)
 - `'postback:<actionName>'` receives only events matching the specific actionName
 
 ```tsx
 useMessagingEvent('postback:add_to_cart', (event) => {
-  console.log('Add to cart:', event.actionName, event.conversationId)
+  console.log('Add to cart:', event.data.actionName, event.data.conversationId)
 })
 ```
 
@@ -110,9 +110,34 @@ import { useMessagingEvent } from '@stackable-labs/sdk-extension-react'
 import type { MessagingEventHandler } from '@stackable-labs/sdk-extension-contracts'
 
 const handlePostback = useCallback<MessagingEventHandler>((event) => {
-  console.log('Add to cart:', event.actionName, event.conversationId)
+  console.log('Add to cart:', event.data.actionName, event.data.conversationId)
 }, [])
 useMessagingEvent('postback:add_to_cart', handlePostback)
+```
+
+## useActivityEvent(eventType, handler)
+Subscribe to host activity events. Requires `events:activity` permission and matching entries in manifest `events` array.
+- `eventType: 'page_view' | 'click' | 'product_view' | 'add_to_cart' | 'purchase' | 'search' | 'form_submit' | '*'` (domain-stripped)
+- `handler: ActivityEventHandler` — `(event: ActivityEvent) => void`
+- `ActivityEvent: { eventName: string, data: Record<string, unknown> }`
+- `'*'` receives ALL activity events
+
+```tsx
+useActivityEvent('product_view', (event) => {
+  console.log('Product:', event.data.productId)
+})
+```
+
+## useEvent(eventType, handler)
+Generic cross-domain event hook. Subscribe to any event using fully-qualified event types.
+- `eventType: EventType` — fully-qualified (e.g., `'activity:product_view'`, `'identity:login'`, `'messaging:postback'`)
+- Domain wildcard (e.g., `'activity'`) receives all events in that domain
+- `handler: (event: BaseEvent) => void`
+
+```tsx
+useEvent('activity:product_view', (event) => {
+  console.log('Product viewed:', event.data)
+})
 ```
 
 ## useExtendIdentity(handler)
