@@ -55,21 +55,65 @@ export function createApi(fetch: FetchFn) {
 ```
 
 ## 5. Use the capability in a surface
-Access via the `useCapabilities()` hook:
+
+### For data.*, context.*, and actions.* capabilities — use `useCapabilities()`:
 ```tsx
+import { useCapabilities } from '@stackable-labs/sdk-extension-react'
+
 const capabilities = useCapabilities()
-// data.query: capabilities.data.query({ action: 'getItems', ... })
-// data.fetch: const api = createApi(capabilities.data.fetch)
-// context.read: capabilities.context.read()  (or use useContextData() hook)
+// data.query:    capabilities.data.query({ action: 'getItems', ... })
+// data.fetch:    const api = createApi(capabilities.data.fetch)
+// context.read:  capabilities.context.read()  (or use useContextData() hook)
 // actions.toast: capabilities.actions.toast({ message: 'Done!', type: 'success' })
 // actions.invoke: capabilities.actions.invoke('newConversation', { tags: ['order'], fields: [{ id: 'field_id', value: 'val' }] })
-// extend:identity: useExtendIdentity((claims) => ({ ...additionalClaims }))
-// events:identity: useIdentityEvent('login', (event) => { ... })
-// events:messaging: useMessagingEvent('postback:add_to_cart', (event) => { ... })
-// events:activity: useActivityEvent('product_view', (event) => { ... })
+```
+
+### For events and extend — ALWAYS use dedicated hooks (INSTEAD of useCapabilities direct):
+**IMPORTANT:** Event and extend capabilities have their own React hooks. Never use `capabilities.events.*` or `capabilities.extend.*` — those do not exist.
+
+```tsx
+// events:identity — use useIdentityEvent hook
+import { useIdentityEvent } from '@stackable-labs/sdk-extension-react'
+
+useIdentityEvent('login', (event) => {
+  console.log('User logged in:', event.data.state.user?.email)
+})
+useIdentityEvent('logout', () => {
+  console.log('User logged out')
+})
+```
+
+```tsx
+// events:messaging — use useMessagingEvent hook
+import { useMessagingEvent } from '@stackable-labs/sdk-extension-react'
+
+useMessagingEvent('postback:add_to_cart', (event) => {
+  console.log('Postback:', event.data.actionName, event.data.conversationId)
+})
+```
+
+```tsx
+// events:activity — use useActivityEvent hook
+import { useActivityEvent } from '@stackable-labs/sdk-extension-react'
+
+useActivityEvent('product_view', (event) => {
+  console.log('Activity:', event.eventName, event.data)
+})
+```
+
+```tsx
+// extend:identity — use useExtendIdentity hook
+import { useExtendIdentity } from '@stackable-labs/sdk-extension-react'
+
+useExtendIdentity((claims) => ({
+  external_id: `custom_${claims.external_id}`,
+  loyalty_tier: 'gold',
+}))
 ```
 
 ## 6. Verify
 - Confirm the permission is in manifest.json
 - If data.fetch, confirm the domain is in allowedDomains
-- Confirm the capability is accessed via useCapabilities(), not imported directly
+- For data/context/actions: confirm accessed via `useCapabilities()` hook
+- For events: confirm using `useIdentityEvent`, `useMessagingEvent`, or `useActivityEvent` hooks
+- For extend: confirm using `useExtendIdentity` hook
