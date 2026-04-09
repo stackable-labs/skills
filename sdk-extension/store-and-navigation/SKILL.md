@@ -16,17 +16,15 @@ Define your store in `src/store.ts`:
 ```tsx
 import { createStore } from '@stackable-labs/sdk-extension-react'
 
-type View = { type: 'list' } | { type: 'detail'; id: string }
+type ViewState = { type: 'list' } | { type: 'detail'; id: string }
 
 interface AppState {
-  view: View
-  navigate: (view: View) => void
+  viewState: ViewState
 }
 
-export const store = createStore<AppState>((set) => ({
-  view: { type: 'list' },
-  navigate: (view) => set({ view }),
-}))
+export const appStore = createStore<AppState>({
+  viewState: { type: 'list' },
+})
 ```
 
 ## Reading State in Surfaces
@@ -35,16 +33,15 @@ Use `useStore` with a selector to subscribe to specific slices of state:
 
 ```tsx
 import { useStore } from '@stackable-labs/sdk-extension-react'
-import { store } from '../store'
+import { appStore } from '../store'
 
 export const Content = () => {
-  const view = useStore(store, (s) => s.view)
-  const navigate = useStore(store, (s) => s.navigate)
+  const viewState = useStore(appStore, (s) => s.viewState)
 
-  if (view.type === 'list') {
-    return <ListView onSelect={(id) => navigate({ type: 'detail', id })} />
+  if (viewState.type === 'list') {
+    return <ListView onSelect={(id) => appStore.set({ viewState: { type: 'detail', id } })} />
   }
-  return <DetailView id={view.id} onBack={() => navigate({ type: 'list' })} />
+  return <DetailView id={viewState.id} onBack={() => appStore.set({ viewState: { type: 'list' } })} />
 }
 ```
 
@@ -57,17 +54,17 @@ The store replaces traditional routing — there are no URLs inside the sandbox.
 
 ```tsx
 // Define all possible views as a discriminated union
-type View =
+type ViewState =
   | { type: 'list' }
   | { type: 'detail'; id: string }
   | { type: 'edit'; id: string }
   | { type: 'create' }
 
 // TypeScript narrows the type based on the discriminant
-switch (view.type) {
+switch (viewState.type) {
   case 'list':    return <ListView />
-  case 'detail':  return <DetailView id={view.id} />
-  case 'edit':    return <EditView id={view.id} />
+  case 'detail':  return <DetailView id={viewState.id} />
+  case 'edit':    return <EditView id={viewState.id} />
   case 'create':  return <CreateView />
 }
 ```
@@ -79,22 +76,21 @@ The header can show context based on what the content surface displays:
 ```tsx
 // Header surface — shows back button when on detail view
 export const Header = () => {
-  const view = useStore(store, (s) => s.view)
-  const navigate = useStore(store, (s) => s.navigate)
+  const viewState = useStore(appStore, (s) => s.viewState)
 
   return (
     <Surface id="slot.header">
       <ui.Inline>
-        {view.type !== 'list' && (
+        {viewState.type !== 'list' && (
           <ui.Button
             variant="ghost"
-            onClick={() => navigate({ type: 'list' })}
+            onClick={() => appStore.set({ viewState: { type: 'list' } })}
           >
             Back
           </ui.Button>
         )}
         <ui.Heading level={3}>
-          {view.type === 'list' ? 'All Items' : 'Item Detail'}
+          {viewState.type === 'list' ? 'All Items' : 'Item Detail'}
         </ui.Heading>
       </ui.Inline>
     </Surface>
@@ -108,11 +104,11 @@ Use narrow selectors to minimize re-renders. Each `useStore` call only
 triggers a re-render when its selected value changes:
 
 ```tsx
-// Good — component only re-renders when view changes
-const view = useStore(store, (s) => s.view)
+// Good — component only re-renders when viewState changes
+const viewState = useStore(appStore, (s) => s.viewState)
 
 // Bad — component re-renders on ANY state change
-const state = useStore(store, (s) => s)
+const state = useStore(appStore, (s) => s)
 ```
 
 ## Best Practices
@@ -120,5 +116,5 @@ const state = useStore(store, (s) => s)
 - **One store per extension** — define in `src/store.ts`, import everywhere
 - **Discriminated unions for views** — TypeScript can narrow the type and catch missing cases
 - **Narrow selectors** — select only what the component needs
-- **Actions in the store** — put navigation functions (`navigate`, `setSelected`) in the store, not in components
+- **Use `appStore.set()`** — update state directly via `appStore.set({ viewState: ... })` from any component
 - **No URL routing** — the extension runs in a sandboxed iframe with no URL bar

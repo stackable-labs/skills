@@ -115,6 +115,9 @@ import { useIdentityEvent } from '@stackable-labs/sdk-extension-react'
 useIdentityEvent('login', (event) => {
   console.log('User logged in:', event.data.state.user?.email)
 })
+useIdentityEvent('logout', () => {
+  console.log('User logged out')
+})
 ```
 
 **Note:** Identity state is also available via `context.read()` → `identity` field (requires `context:read`, no separate permission needed).
@@ -122,7 +125,7 @@ useIdentityEvent('login', (event) => {
 ## events:messaging — Messaging Event Subscription
 Subscribe to messaging events (e.g. postback button clicks) pushed from the host widget.
 - **Permission required:** `events:messaging`
-- **Manifest events array:** Declare specific events to listen for (e.g. `["messaging:postback:add_to_cart"]`) or `"messaging:postback"` for all postbacks (requires elevated marketplace review)
+- **Manifest events array:** Declare specific events to listen for (e.g. `["messaging:postback:Buy Now"]`) or `"messaging:postback"` for all postbacks (requires elevated marketplace review)
 - **Hook:** `useMessagingEvent(eventType, handler)` — `MessagingEventHandler` type exported for use with `useCallback`
 - **Event types:** `'postback'` (all postbacks) or `'postback:<actionName>'` (specific postback)
 - **Important:** Only `postback`-type buttons fire this event. The Zendesk bot builder's "Present options" creates `reply`-type buttons (no event). Use the Sunshine Conversations API with `{ "type": "postback", "text": "Button Label", "payload": "..." }` actions to create postback buttons.
@@ -138,8 +141,8 @@ Subscribe to messaging events (e.g. postback button clicks) pushed from the host
 ```tsx
 import { useMessagingEvent } from '@stackable-labs/sdk-extension-react'
 
-useMessagingEvent('postback:add_to_cart', (event) => {
-  console.log('Add to cart:', event.data.actionName, event.data.conversationId)
+useMessagingEvent('postback:Buy Now', (event) => {
+  console.log('Postback:', event.data.actionName, event.data.conversationId)
 })
 ```
 
@@ -148,7 +151,7 @@ Subscribe to host activity events (e.g. page views, clicks, purchases) pushed fr
 - **Permission required:** `events:activity`
 - **Manifest events array:** Declare specific events to listen for (e.g. `["activity:product_view", "activity:add_to_cart"]`) — manifest uses fully-qualified strings
 - **Hook:** `useActivityEvent(eventType, handler)` — `ActivityEventHandler` type exported for use with `useCallback`
-- **Event types (domain-stripped):** `'page_view' | 'click' | 'product_view' | 'add_to_cart' | 'purchase' | 'search' | 'form_submit' | '*'`
+- **Event types (domain-stripped):** `'click' | 'page_view' | 'form_submit' | 'product_view' | 'add_to_cart' | 'purchase' | 'search' | '*'`
 - **Well-known event names:**
 
 | Event | Example payload fields |
@@ -174,7 +177,7 @@ Subscribe to host activity events (e.g. page views, clicks, purchases) pushed fr
 import { useActivityEvent } from '@stackable-labs/sdk-extension-react'
 
 useActivityEvent('product_view', (event) => {
-  console.log('Product:', event.data.productId)
+  console.log('Activity:', event.eventName, event.data)
 })
 ```
 
@@ -197,7 +200,7 @@ Enrich identity JWT claims before signing. The host sends base claims to your ex
 import { useExtendIdentity } from '@stackable-labs/sdk-extension-react'
 
 useExtendIdentity((claims) => ({
-  external_id: `shopify_${claims.external_id}`,
+  external_id: `custom_${claims.external_id}`,
   loyalty_tier: 'gold',
 }))
 ```

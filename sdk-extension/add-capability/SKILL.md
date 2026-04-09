@@ -28,7 +28,7 @@ Add the corresponding permission to `packages/extension/public/manifest.json`:
 - `actions.invoke` → `"actions:invoke"`
 - `extend:identity` → `"extend:identity"`
 - `events:identity` → `"events:identity"` (also add entries to `events` array, e.g. `["identity:login", "identity:logout"]`)
-- `events:messaging` → `"events:messaging"` (also add entries to `events` array, e.g. `["messaging:postback:add_to_cart"]`)
+- `events:messaging` → `"events:messaging"` (also add entries to `events` array, e.g. `["messaging:postback:Buy Now"]`)
 - `events:activity` → `"events:activity"` (also add entries to `events` array, e.g. `["activity:product_view"]`)
 
 Only add if not already declared.
@@ -87,7 +87,7 @@ useIdentityEvent('logout', () => {
 // events:messaging — use useMessagingEvent hook
 import { useMessagingEvent } from '@stackable-labs/sdk-extension-react'
 
-useMessagingEvent('postback:add_to_cart', (event) => {
+useMessagingEvent('postback:Buy Now', (event) => {
   console.log('Postback:', event.data.actionName, event.data.conversationId)
 })
 ```

@@ -13,16 +13,21 @@ Bootstrap the extension runtime. Call once in `src/index.tsx`.
 - `options?: { extensionId?: string }` — extension identifier
 
 ```tsx
-createExtension(
-  () => (
-    <>
-      <Header />
-      <Content />
-      <Footer />
-    </>
-  ),
-  { extensionId: 'my-extension' },
+import { createExtension } from '@stackable-labs/sdk-extension-react'
+import { Header } from './surfaces/Header'
+import { Content } from './surfaces/Content'
+import { Footer } from './surfaces/Footer'
+
+const Extension = () => (
+  <>
+    <Header />
+    <Content />
+    <Footer />
+  </>
 )
+
+// NOTE: extensionId is optional — used when connected to a registered extension
+createExtension(() => <Extension />, { extensionId: 'my-extension' })
 ```
 
 ## Surface component
@@ -85,7 +90,10 @@ Subscribe to identity events pushed from the host. Requires `events:identity` pe
 
 ```tsx
 useIdentityEvent('login', (event) => {
-  console.log('Logged in:', event.data.state.user?.email)
+  console.log('User logged in:', event.data.state.user?.email)
+})
+useIdentityEvent('logout', () => {
+  console.log('User logged out')
 })
 ```
 
@@ -98,8 +106,8 @@ Subscribe to messaging events (e.g. postback button clicks) pushed from the host
 - `'postback:<actionName>'` receives only events matching the specific actionName
 
 ```tsx
-useMessagingEvent('postback:add_to_cart', (event) => {
-  console.log('Add to cart:', event.data.actionName, event.data.conversationId)
+useMessagingEvent('postback:Buy Now', (event) => {
+  console.log('Postback:', event.data.actionName, event.data.conversationId)
 })
 ```
 
@@ -110,33 +118,33 @@ import { useMessagingEvent } from '@stackable-labs/sdk-extension-react'
 import type { MessagingEventHandler } from '@stackable-labs/sdk-extension-contracts'
 
 const handlePostback = useCallback<MessagingEventHandler>((event) => {
-  console.log('Add to cart:', event.data.actionName, event.data.conversationId)
+  console.log('Postback:', event.data.actionName, event.data.conversationId)
 }, [])
-useMessagingEvent('postback:add_to_cart', handlePostback)
+useMessagingEvent('postback:Buy Now', handlePostback)
 ```
 
 ## useActivityEvent(eventType, handler)
 Subscribe to host activity events. Requires `events:activity` permission and matching entries in manifest `events` array.
-- `eventType: 'page_view' | 'click' | 'product_view' | 'add_to_cart' | 'purchase' | 'search' | 'form_submit' | '*'` (domain-stripped)
+- `eventType: 'click' | 'page_view' | 'form_submit' | 'product_view' | 'add_to_cart' | 'purchase' | 'search' | '*'` (domain-stripped)
 - `handler: ActivityEventHandler` — `(event: ActivityEvent) => void`
 - `ActivityEvent: { eventName: string, data: Record<string, unknown> }`
 - `'*'` receives ALL activity events
 
 ```tsx
 useActivityEvent('product_view', (event) => {
-  console.log('Product:', event.data.productId)
+  console.log('Activity:', event.eventName, event.data)
 })
 ```
 
 ## useEvent(eventType, handler)
-Generic cross-domain event hook. Subscribe to any event using fully-qualified event types.
+Generic cross-domain event hook (should not be used unless absolutely required). Subscribe to any event using fully-qualified event types.
 - `eventType: EventType` — fully-qualified (e.g., `'activity:product_view'`, `'identity:login'`, `'messaging:postback'`)
 - Domain wildcard (e.g., `'activity'`) receives all events in that domain
 - `handler: (event: BaseEvent) => void`
 
 ```tsx
-useEvent('activity:product_view', (event) => {
-  console.log('Product viewed:', event.data)
+useEvent('activity', (event) => {
+  console.log('Activity:', event.data)
 })
 ```
 
@@ -147,7 +155,8 @@ Register a handler to enrich identity JWT claims before signing. Requires `exten
 
 ```tsx
 useExtendIdentity((claims) => ({
-  external_id: `shopify_${claims.external_id}`,
+  external_id: `custom_${claims.external_id}`,
+  loyalty_tier: 'gold',
 }))
 ```
 
@@ -158,7 +167,8 @@ import { useExtendIdentity } from '@stackable-labs/sdk-extension-react'
 import type { ExtendIdentityHandler } from '@stackable-labs/sdk-extension-contracts'
 
 const handleExtend = useCallback<ExtendIdentityHandler>((claims) => ({
-  external_id: `shopify_${claims.external_id}`,
+  external_id: `custom_${claims.external_id}`,
+  loyalty_tier: 'gold',
 }), [])
 useExtendIdentity(handleExtend)
 ```

@@ -72,7 +72,8 @@ const Extension = () => (
   </>
 )
 
-createExtension(<Extension />)
+// NOTE: extensionId is optional — used when connected to a registered extension
+createExtension(() => <Extension />, { extensionId: 'my-extension' })
 ```
 
 `createExtension` handles:
@@ -87,22 +88,43 @@ createExtension(<Extension />)
 The store provides cross-surface state management:
 
 ```tsx
-import { createStore } from '@stackable-labs/sdk-extension-react'
+import { createStore, useStore, Surface, ui } from '@stackable-labs/sdk-extension-react'
 
-type View = { type: 'list' } | { type: 'detail'; id: string }
+// store.ts
+type ViewState = { type: 'list' } | { type: 'detail'; id: string }
 
 interface AppState {
-  view: View
-  navigate: (view: View) => void
+  viewState: ViewState
 }
 
-export const store = createStore<AppState>((set) => ({
-  view: { type: 'list' },
-  navigate: (view) => set({ view }),
-}))
+export const appStore = createStore<AppState>({
+  viewState: { type: 'list' },
+})
+
+// Content.tsx
+export function Content(): React.ReactElement {
+  const viewState = useStore(appStore, (s) => s.viewState)
+
+  const goToDetail = (id: string) => appStore.set({ viewState: { type: 'detail', id } })
+  const goBack = () => appStore.set({ viewState: { type: 'list' } })
+
+  return (
+    <Surface id="slot.content">
+      {viewState.type === 'list' && (
+        <ui.Button onClick={() => goToDetail('abc123')}>View Detail</ui.Button>
+      )}
+      {viewState.type === 'detail' && (
+        <ui.Stack direction="column" gap="2">
+          <ui.Text>Viewing: {viewState.id}</ui.Text>
+          <ui.Button onClick={goBack}>Back</ui.Button>
+        </ui.Stack>
+      )}
+    </Surface>
+  )
+}
 ```
 
-All surfaces import from the same store instance. Use `useStore(store, selector)`
+All surfaces import from the same store instance. Use `useStore(appStore, selector)`
 to read state with minimal re-renders.
 
 ### Surface Files
@@ -112,15 +134,17 @@ Each surface is a React component in `src/surfaces/`:
 ```tsx
 import { Surface, ui } from '@stackable-labs/sdk-extension-react'
 
-export const Content = () => (
-  <Surface id="slot.content">
-    <ui.Card>
-      <ui.CardContent>
-        <ui.Text>Extension content</ui.Text>
-      </ui.CardContent>
-    </ui.Card>
-  </Surface>
-)
+export function Content() {
+  return (
+    <Surface id="slot.content">
+      <ui.Card>
+        <ui.CardContent>
+          <ui.Text>Extension content</ui.Text>
+        </ui.CardContent>
+      </ui.Card>
+    </Surface>
+  )
+}
 ```
 
 The `id` prop must match a target in `manifest.json`.

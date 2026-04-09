@@ -23,17 +23,19 @@ the `<Surface>` wrapper from `@stackable-labs/sdk-extension-react`.
 Each surface is a React component wrapped in `<Surface>`:
 
 ```tsx
-import { Surface, useCapabilities, ui } from '@stackable-labs/sdk-extension-react'
+import { Surface, ui } from '@stackable-labs/sdk-extension-react'
 
-export const Content = () => (
-  <Surface id="slot.content">
-    <ui.Card>
-      <ui.CardContent>
-        <ui.Text>Your extension content here</ui.Text>
-      </ui.CardContent>
-    </ui.Card>
-  </Surface>
-)
+export function Content() {
+  return (
+    <Surface id="slot.content">
+      <ui.Card>
+        <ui.CardContent>
+          <ui.Text>Extension content</ui.Text>
+        </ui.CardContent>
+      </ui.Card>
+    </Surface>
+  )
+}
 ```
 
 The `id` prop must match a target declared in your `manifest.json`:
@@ -61,7 +63,8 @@ const Extension = () => (
   </>
 )
 
-createExtension(<Extension />)
+// NOTE: extensionId is optional — used when connected to a registered extension
+createExtension(() => <Extension />, { extensionId: 'my-extension' })
 ```
 
 `createExtension` bootstraps the extension runtime — it handles the sandboxed iframe
@@ -82,13 +85,13 @@ and write to the same store, enabling coordinated behavior across layout slots:
 
 ```tsx
 import { useStore } from '@stackable-labs/sdk-extension-react'
-import { store } from '../store'
+import { appStore } from '../store'
 
 export const Header = () => {
-  const view = useStore(store, (s) => s.view)
+  const viewState = useStore(appStore, (s) => s.viewState)
   return (
     <Surface id="slot.header">
-      <ui.Text>Current view: {view}</ui.Text>
+      <ui.Text>Current view: {viewState.type}</ui.Text>
     </Surface>
   )
 }
