@@ -24,8 +24,8 @@ const result = await capabilities.data.query<Customer>({
 })
 ```
 
-## data.fetch — Direct HTTP from Sandbox
-Extension makes HTTP requests directly. Domain must be in `allowedDomains` in manifest.
+## data.fetch — HTTP Requests to External APIs
+Make HTTP requests to external APIs. Domain must be in `allowedDomains` in manifest. Requests are proxied through the Stackable platform server.
 - **Permission required:** `data:fetch`
 - **Usage:** `capabilities.data.fetch(url: string, init?: FetchRequestInit): Promise<FetchResponse>`
 - **FetchRequestInit:** `{ method?: 'GET'|'POST'|'PUT'|'PATCH'|'DELETE', headers?: Record<string,string>, body?: unknown }`
@@ -41,20 +41,51 @@ if (!result.ok) throw new Error(`Request failed: ${result.status}`)
 const data = result.data as MyType
 ```
 
-## context.read — Read Host Context
-Read host-provided context (customer ID, email, etc.).
-- **Permission required:** `context:read`
-- **Usage:** `capabilities.context.read(): Promise<ContextData>`
-- **ContextData shape:** `{ customerId?: string, customerEmail?: string, [key: string]: unknown }`
-- **Convenience hook:** `useContextData()` returns `ContextData & { loading: boolean }`
+### Secret injection via `{{settings.xxx}}` placeholders
+For API keys and tokens stored as `secret: true` fields in `settingsSchema`, use template placeholders in header values. The proxy resolves them server-side — **the real secret never enters extension code**.
 
 ```tsx
-// Preferred: use the hook
-const { loading, customerId, customerEmail } = useContextData()
+const result = await capabilities.data.fetch('https://api.example.com/orders', {
+  method: 'GET',
+  headers: {
+    'X-API-Key': '{{settings.apiKey}}',
+    'Authorization': 'Bearer {{settings.token}}',
+  },
+})
+```
+
+- Placeholders are only allowed in **header values** (not URLs, header names, or body)
+- For `required: true` secret fields, the proxy returns 400 if the value is not configured
+- For optional secret fields, the entire header is omitted if the value is not configured
+- Declare secret fields in your `manifest.json` `settingsSchema` with `"secret": true`
+
+## context.read — Read Host Context
+Read host-provided context (customer ID, email, extension settings, etc.).
+- **Permission required:** `context:read`
+- **Usage:** `capabilities.context.read(): Promise<ContextData>`
+- **ContextData shape:** `{ customerId?: string, customerEmail?: string, settings?: Record<string, unknown>, [key: string]: unknown }`
+- **Convenience hooks:**
+  - `useContextData()` returns `ContextData & { loading: boolean }`
+  - `useSettings()` returns `Record<string, unknown>` — shorthand for `contextData.settings ?? {}`
+
+```tsx
+// Read all context (customer + settings)
+const { loading, customerId, customerEmail, settings } = useContextData()
+
+// Read only extension settings (convenience)
+const settings = useSettings()
+const apiBaseUrl = settings.baseUrl as string
 
 // Alternative: use the capability directly
 const context = await capabilities.context.read()
 ```
+
+### Extension settings in context
+Non-secret settings declared in `settingsSchema` are automatically available via `contextData.settings`. Values are scoped to the calling extension on the current instance — an extension never sees other extensions' settings.
+
+- **Secret fields are never included** in context — use `{{settings.xxx}}` placeholders in `data.fetch` headers instead
+- Settings propagate on **page load** — changes made in the admin dashboard take effect on the next page reload, not mid-session
+- No new permission needed — `context:read` is the only gate
 
 ## actions.toast — Show Toast Notifications
 Display a toast notification in the host UI.

@@ -53,9 +53,16 @@ const viewState = useStore(appStore, (s) => s.viewState)
 ```
 
 ## useContextData()
-Reads host-provided context. Returns `{ loading, customerId, customerEmail, ... }`.
+Reads host-provided context including extension settings. Returns `{ loading, customerId, customerEmail, settings, ... }`.
 ```tsx
-const { loading, customerId, customerEmail } = useContextData()
+const { loading, customerId, customerEmail, settings } = useContextData()
+```
+
+## useSettings()
+Convenience hook for reading extension settings. Returns non-secret settings scoped to this extension on this instance.
+```tsx
+const settings = useSettings()
+const apiBaseUrl = settings.baseUrl as string
 ```
 
 ## useSurfaceContext()
