@@ -46,13 +46,15 @@ export const appStore = createStore<AppState>({
 
 ```tsx
 // src/surfaces/Content.tsx
-import { ui, useStore, useContextData, useSettings, Surface } from '@stackable-labs/sdk-extension-react'
+import { ui, useStore, useContextData, Surface } from '@stackable-labs/sdk-extension-react'
 import { appStore } from '../store'
 
 export function Content() {
   const viewState = useStore(appStore, (s) => s.viewState)
   const { loading } = useContextData()
-  const settings = useSettings() // Non-secret settings from settingsSchema
+  // Non-secret settings from settingsSchema (add settingsSchema to manifest.json to use). Ex:
+  // const settings = useSettings()
+  // const apiEndpoint = settings.apiEndpoint as string
 
   if (loading) {
     return (
