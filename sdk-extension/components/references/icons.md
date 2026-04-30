@@ -27,3 +27,4 @@ Use with `<ui.Icon name="icon-name" />`.
 - `x-circle`
 - `alert-circle`
 - `book-open`
+- `qr-code`
