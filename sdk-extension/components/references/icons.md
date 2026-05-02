@@ -28,3 +28,4 @@ Use with `<ui.Icon name="icon-name" />`.
 - `alert-circle`
 - `book-open`
 - `qr-code`
+- `image-off`
