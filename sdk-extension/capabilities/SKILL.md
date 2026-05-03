@@ -59,6 +59,8 @@ const result = await capabilities.data.fetch('https://api.example.com/orders', {
 - For optional secret fields, the entire header is omitted if the value is not configured
 - Declare secret fields in your `manifest.json` `settingsSchema` with `"secret": true`
 
+> See [Instance Settings](./instance-settings) for the full schema-declaration + storage-mode story, including which field types accept `secret: true`.
+
 ## context.read — Read Host Context
 Read host-provided context (customer ID, email, extension settings, etc.).
 - **Permission required:** `context:read`

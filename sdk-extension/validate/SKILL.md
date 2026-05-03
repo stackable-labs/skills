@@ -6,7 +6,17 @@ description: "Validate this extension for common errors before deploying: manife
 # Validate Extension
 
 Check this extension for common errors before deploying. Run through each check
-and report all issues found.
+and ensure no issues found before you submit.
+
+> **Tip — let the platform validate for you.** The hosted Stackable MCP server
+> exposes a `validate_manifest` tool that runs the same server-side checks the
+> marketplace submission flow uses. If your AI client is connected to the
+> Stackable MCP server (see [AI-Accelerated Development](/docs/reference/ai-accelerated-development#live-mcp-server)),
+> just ask it to validate `packages/extension/public/manifest.json` for you —
+> it returns structured errors and warnings without you having to walk the
+> checklist below by hand. The manual steps remain useful for code-level checks
+> the manifest validator can't see (permission usage, surface wiring, sandbox
+> compliance).
 
 ## 1. Manifest validation
 Read `packages/extension/public/manifest.json` and verify:
@@ -48,3 +58,8 @@ Verify that:
 ## 5. Summary
 Print a summary: total issues found, categorized by severity (error vs warning).
 Errors must be fixed before deploying. Warnings are recommendations.
+
+## Next: deploy
+
+Once validation passes, build the production bundle, host it, and register the
+Bundle URL with Stackable. See the [Deploy guide](/docs/guides/deploy).
