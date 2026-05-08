@@ -5,17 +5,17 @@ description: "Host theme inheritance, className usage, layout components, and CS
 
 # Styling & Theming
 
-Extensions inherit the host application's theme automatically. The SDK component library
-(`ui.*` namespace) renders inside the host's styling context, so colors, fonts, and
-spacing match the host UI without any configuration.
+Extensions inherit the embedding application's theme automatically. The SDK component
+library (`ui.*` namespace) renders inside the surrounding application's styling context,
+so colors, fonts, and spacing match without any configuration.
 
-## Host Theme Inheritance
+## Theme Inheritance
 
-The `ui.*` components automatically use the host's design tokens:
-- **Colors** — text, backgrounds, borders adapt to the host's color scheme
-- **Typography** — font family, sizes, and weights match the host
-- **Spacing** — padding and margins follow the host's spacing scale
-- **Dark mode** — components respond to the host's light/dark mode setting
+The `ui.*` components automatically use the embedding application's design tokens:
+- **Colors** — text, backgrounds, borders adapt to the application's color scheme
+- **Typography** — font family, sizes, and weights match the application
+- **Spacing** — padding and margins follow the application's spacing scale
+- **Dark mode** — components respond to the application's light/dark mode setting
 
 No CSS or theme configuration is needed in the extension.
 
@@ -87,7 +87,7 @@ Use component props (not CSS) to control visual style:
 
 Extensions run in a sandboxed iframe. These constraints apply:
 
-- **No global CSS** — styles don't leak between extensions or into the host
+- **No global CSS** — styles don't leak between extensions or into the embedding application
 - **No `document` access** — cannot inject stylesheets or modify the DOM directly
 - **No `window.location`** — cannot read or modify the URL
 - **Component-only styling** — use `className` on `ui.*` components, not raw HTML elements
@@ -95,7 +95,7 @@ Extensions run in a sandboxed iframe. These constraints apply:
 
 ## Responsive Design
 
-Extensions render in a constrained viewport (the host's sidebar or panel). Design for
+Extensions render in a constrained viewport (the embedding application's sidebar or panel). Design for
 narrow widths:
 
 ```tsx
@@ -112,4 +112,4 @@ narrow widths:
 - Assume a **narrow viewport** (~300-400px wide)
 - Use `<ui.ScrollArea>` for long lists or content
 - Avoid horizontal scrolling — stack elements vertically
-- Test at the minimum panel width the host supports
+- Test at the minimum panel width the embedding application supports

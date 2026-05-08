@@ -25,14 +25,14 @@ Apply them via the `className` prop on `ui.*` components:
 Always prefer:
 - Component variants (`<ui.Button variant="primary">`) over color overrides
 - Layout components (`<ui.Stack>`, `<ui.Inline>`) over manual flexbox class chains
-- The semantic color tokens (`text-foreground`, `bg-background`) which adapt to the host theme
+- The semantic color tokens (`text-foreground`, `bg-background`) which adapt to the embedding application's theme
 
 ## Safelist limits
 
 The safelist is intentionally a fixed list, **NOT the full Tailwind catalog** to provide UI consistency and reduce bundle size. Anything beyond what is listed below will be missing from the platform stylesheet at runtime — the class will appear in your DOM but the corresponding CSS rule will not exist, and the style will silently no-op. In particular:
 
 - **Arbitrary values are NOT supported** in general (e.g. `w-[123px]`, `bg-[#1a1a1a]`, `text-[15px]`). The single exception is `aspect-[9/16]` (portrait video). For any other arbitrary value, use the named utility closest to your target.
-- **Off-list color shades** (e.g. `bg-cyan-500`, `text-rose-500`) are not pre-emitted. The supported color set below is curated for visual consistency with the host theme.
+- **Off-list color shades** (e.g. `bg-cyan-500`, `text-rose-500`) are not pre-emitted. The supported color set below is curated for visual consistency with the embedding application's theme.
 - **Off-list ladder values** (e.g. `mt-32`, `text-4xl`, `w-128`) are not pre-emitted. The ladders below cover sizes appropriate for the embedded widget's narrow viewport.
 
 If you need something that's not on this list, file an issue with your use case — the safelist is curated, not frozen.

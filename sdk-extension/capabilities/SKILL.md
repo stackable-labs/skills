@@ -10,12 +10,12 @@ Access capabilities via the `useCapabilities()` hook:
 const capabilities = useCapabilities()
 ```
 
-## data.query — Host-Mediated Requests
-The host handles the API call. Extension sends an action name + params, host returns data.
+## data.query — Platform-Mediated Requests
+The Stackable platform handles the API call. Extension sends an action name + params, the platform returns data.
 - **Permission required:** `data:query`
 - **Usage:** `capabilities.data.query<T>(payload: ApiRequest): Promise<T>`
 - **ApiRequest shape:** `{ action: string; [key: string]: unknown }`
-- **When to use:** When the host application handles the API integration
+- **When to use:** When the platform handles the API integration
 
 ```tsx
 const result = await capabilities.data.query<Customer>({
@@ -61,8 +61,8 @@ const result = await capabilities.data.fetch('https://api.example.com/orders', {
 
 > See [Instance Settings](./instance-settings) for the full schema-declaration + storage-mode story, including which field types accept `secret: true`.
 
-## context.read — Read Host Context
-Read host-provided context (customer ID, email, extension settings, etc.).
+## context.read — Read Platform Context
+Read framework-provided context (customer ID, email, extension settings, etc.).
 - **Permission required:** `context:read`
 - **Usage:** `capabilities.context.read(): Promise<ContextData>`
 - **ContextData shape:** `{ customerId?: string, customerEmail?: string, settings?: Record<string, unknown>, [key: string]: unknown }`
@@ -90,7 +90,7 @@ Non-secret settings declared in `settingsSchema` are automatically available via
 - No new permission needed — `context:read` is the only gate
 
 ## actions.toast — Show Toast Notifications
-Display a toast notification in the host UI.
+Display a toast notification in the framework widget's UI.
 - **Permission required:** `actions:toast`
 - **Usage:** `capabilities.actions.toast(payload: ToastPayload): Promise<void>`
 - **ToastPayload:** `{ message: string, type?: 'success'|'error'|'info'|'warning', duration?: number }`
@@ -99,8 +99,8 @@ Display a toast notification in the host UI.
 capabilities.actions.toast({ message: 'Saved!', type: 'success' })
 ```
 
-## actions.invoke — Invoke Host Actions
-Trigger host-defined actions (e.g., open a new conversation, set conversation tags/fields).
+## actions.invoke — Invoke Platform Actions
+Trigger framework-defined actions (e.g., open a new conversation, set conversation tags/fields).
 - **Permission required:** `actions:invoke`
 - **Usage:** `capabilities.actions.invoke<T>(action: string, payload?: Record<string, unknown>): Promise<T>`
 - **Available actions:**
@@ -129,7 +129,7 @@ await capabilities.actions.invoke('setConversationFields', [
 **Zendesk constraints:** Tags max 20, auto-lowercased/sanitized. Fields require `web_widget_conversation_ticket_metadata` feature flag. Both `conversationTags` and `conversationFields` **replace** on each call (not additive).
 
 ## events:identity — Identity Event Subscription
-Subscribe to real-time identity events (login, logout, refresh, expired) pushed from the host.
+Subscribe to real-time identity events (login, logout, refresh, expired) pushed from the host via the framework.
 - **Permission required:** `events:identity`
 - **Manifest events array:** Declare specific events to listen for (e.g. `["identity:login", "identity:logout"]`)
 - **Hook:** `useIdentityEvent(eventType, handler)`
@@ -180,7 +180,7 @@ useMessagingEvent('postback:Buy Now', (event) => {
 ```
 
 ## events:activity — Activity Event Subscription
-Subscribe to host activity events (e.g. page views, clicks, purchases) pushed from the host application.
+Subscribe to activity events (e.g. page views, clicks, purchases) pushed from the host via the framework.
 - **Permission required:** `events:activity`
 - **Manifest events array:** Declare specific events to listen for (e.g. `["activity:product_view", "activity:add_to_cart"]`) — manifest uses fully-qualified strings
 - **Hook:** `useActivityEvent(eventType, handler)` — `ActivityEventHandler` type exported for use with `useCallback`
@@ -217,7 +217,7 @@ useActivityEvent('product_view', (event) => {
 **Generic alternative:** `useEvent('activity:product_view', handler)` — a cross-domain hook that accepts fully-qualified event types. Domain wildcard (e.g., `'activity'`) receives all events in that domain.
 
 ## extend:identity — Identity Claim Enrichment
-Enrich identity JWT claims before signing. The host sends base claims to your extension, and you return additional claims to merge into the token.
+Enrich identity JWT claims before signing. The framework sends base claims to your extension, and you return additional claims to merge into the token.
 - **Permission required:** `extend:identity`
 - **Hook:** `useExtendIdentity(handler)` — `ExtendIdentityHandler` type exported for use with `useCallback`
 - **Handler signature:** `(claims: IdentityBaseClaims) => Record<string, unknown> | Promise<Record<string, unknown>>`

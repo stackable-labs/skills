@@ -89,7 +89,7 @@ const appStore = createStore<AppState>({ viewState: { type: 'menu' } })
 - `subscribe(listener: (state: T) => void): () => void` — subscribe, returns unsubscribe fn
 
 ## useIdentityEvent(eventType, handler)
-Subscribe to identity events pushed from the host. Requires `events:identity` permission and matching entries in manifest `events` array.
+Subscribe to identity events pushed from the host via the framework. Requires `events:identity` permission and matching entries in manifest `events` array.
 - `eventType: 'login' | 'logout' | 'refresh' | 'expired'`
 - `handler: (event: IdentityEvent) => void`
 - `IdentityEvent: { eventName: IdentityEventType, data: { state: IdentityState, timestamp: string } }`
@@ -131,7 +131,7 @@ useMessagingEvent('postback:Buy Now', handlePostback)
 ```
 
 ## useActivityEvent(eventType, handler)
-Subscribe to host activity events. Requires `events:activity` permission and matching entries in manifest `events` array.
+Subscribe to activity events pushed from the host via the framework. Requires `events:activity` permission and matching entries in manifest `events` array.
 - `eventType: 'click' | 'page_view' | 'form_submit' | 'product_view' | 'add_to_cart' | 'purchase' | 'search' | '*'` (domain-stripped)
 - `handler: ActivityEventHandler` — `(event: ActivityEvent) => void`
 - `ActivityEvent: { eventName: string, data: Record<string, unknown> }`

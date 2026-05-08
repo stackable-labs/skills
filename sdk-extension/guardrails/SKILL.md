@@ -13,13 +13,13 @@ These rules must always be followed when writing extension code.
 
 ## Components
 - Use the `ui.*` namespace for components (`<ui.Card>`, `<ui.Button>`) — don't import components directly
-- Only use the attributes listed in the component reference — the host rejects unknown attributes
+- Only use the attributes listed in the component reference — the framework rejects unknown attributes
 - Use `<ui.ScrollArea>` for content that may overflow
 
 ## Manifest
 - Always declare permissions in `manifest.json` before using capabilities
 - Don't use `data.fetch` without adding the domain to `allowedDomains` in manifest
-- `allowedDomains` must be exact hostnames — no wildcards, no paths
+- `allowedDomains`: prefer exact hostnames. Use `*.<suffix>` wildcards only if you need any subdomain; the apex is separate. No paths, no protocols, no mid-string wildcards. Wildcards must use a multi-label suffix (e.g., `*.example.com`, not `*.com`); TLD patterns such as `*.co.uk` may pass format checks but will be rejected at submission
 
 ## Entry Point
 - Don't modify `index.html` — the extension entry point is always `src/index.tsx` via `createExtension`

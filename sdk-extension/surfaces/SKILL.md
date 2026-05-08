@@ -5,7 +5,7 @@ description: "Surface types, lifecycle, layout slots, and multi-surface composit
 
 # Surfaces
 
-Surfaces are the UI slots where your extension renders content inside the host application.
+Surfaces are the UI slots where your extension renders content inside the embedding application.
 Each surface maps to a specific layout position and is declared as a React component using
 the `<Surface>` wrapper from `@stackable-labs/sdk-extension-react`.
 
@@ -68,15 +68,15 @@ createExtension(() => <Extension />, { extensionId: 'my-extension' })
 ```
 
 `createExtension` bootstraps the extension runtime — it handles the sandboxed iframe
-communication, capability injection, and surface registration with the host.
+communication, capability injection, and surface registration with the framework.
 
 ## Surface Lifecycle
 
-1. **Mount** — Host creates an iframe for the extension and loads the entry point
+1. **Mount** — The framework creates an iframe for the extension and loads the entry point
 2. **Register** — `createExtension` scans the rendered tree for `<Surface>` components
-3. **Render** — Each `<Surface>` renders its children into the matching host slot
+3. **Render** — Each `<Surface>` renders its children into the matching slot in the embedding application
 4. **Update** — Surfaces re-render when props, state, or context data changes
-5. **Unmount** — Host removes the extension iframe when no longer needed
+5. **Unmount** — The framework removes the extension iframe when no longer needed
 
 ## Multi-Surface State
 
