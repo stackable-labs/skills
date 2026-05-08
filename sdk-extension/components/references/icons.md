@@ -24,8 +24,11 @@ Use with `<ui.Icon name="icon-name" />`.
 - `sparkles`
 - `truck`
 - `user`
+- `video`
 - `x-circle`
 - `alert-circle`
 - `book-open`
 - `qr-code`
 - `image-off`
+- `circle-play`
+- `tv-minimal-play`
