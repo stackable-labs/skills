@@ -11,7 +11,7 @@ Wire up a new capability in this extension. Follow these steps exactly:
 Ask which capability to add. Valid capabilities:
 - `data.query` — host-mediated data requests (action name + params → host returns data)
 - `data.fetch` — direct HTTP requests from the sandbox (requires allowedDomains)
-- `context.read` — read host-provided context (customerId, customerEmail, etc.)
+- `context.read` — read host-provided context (customerId, customerEmail, messaging.conversationId, etc.)
 - `actions.toast` — show toast notifications (success, error, info, warning)
 - `actions.invoke` — invoke host actions (e.g., open new conversation)
 - `extend:identity` — enrich identity JWT claims before signing

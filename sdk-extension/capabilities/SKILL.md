@@ -62,17 +62,18 @@ const result = await capabilities.data.fetch('https://api.example.com/orders', {
 > See [Instance Settings](./instance-settings) for the full schema-declaration + storage-mode story, including which field types accept `secret: true`.
 
 ## context.read — Read Platform Context
-Read framework-provided context (customer ID, email, extension settings, etc.).
+Read framework-provided context (customer ID, email, messaging conversation, extension settings, etc.).
 - **Permission required:** `context:read`
 - **Usage:** `capabilities.context.read(): Promise<ContextData>`
-- **ContextData shape:** `{ customerId?: string, customerEmail?: string, settings?: Record<string, unknown>, [key: string]: unknown }`
+- **ContextData shape:** `{ customerId?: string, customerEmail?: string, messaging?: { conversationId?: string | null, appId?: string | null }, settings?: Record<string, unknown>, [key: string]: unknown }`
 - **Convenience hooks:**
   - `useContextData()` returns `ContextData & { loading: boolean }`
   - `useSettings()` returns `Record<string, unknown>` — shorthand for `contextData.settings ?? {}`
 
 ```tsx
-// Read all context (customer + settings)
-const { loading, customerId, customerEmail, settings } = useContextData()
+// Read all context (customer + messaging + settings)
+const { loading, customerId, customerEmail, messaging, settings } = useContextData()
+const conversationId = messaging?.conversationId
 
 // Read only extension settings (convenience)
 const settings = useSettings()
@@ -81,6 +82,9 @@ const apiBaseUrl = settings.baseUrl as string
 // Alternative: use the capability directly
 const context = await capabilities.context.read()
 ```
+
+### Messaging context
+`messaging.conversationId` is the active Messaging conversation ID, or `null` until the widget has an open conversation. Use this when you need the ID for an API call from a non-event surface. If you're already reacting to a postback button click, prefer reading `event.data.conversationId` from `useMessagingEvent` — it doesn't require `context:read`.
 
 ### Extension settings in context
 Non-secret settings declared in `settingsSchema` are automatically available via `contextData.settings`. Values are scoped to the calling extension on the current instance — an extension never sees other extensions' settings.
@@ -104,7 +108,7 @@ Trigger framework-defined actions (e.g., open a new conversation, set conversati
 - **Permission required:** `actions:invoke`
 - **Usage:** `capabilities.actions.invoke<T>(action: string, payload?: Record<string, unknown>): Promise<T>`
 - **Available actions:**
-  - `'newConversation'` — start a new Zendesk conversation (optionally with tags/fields)
+  - `'newConversation'` — start a new Messaging conversation (optionally with tags/fields)
   - `'setConversationTags'` — set tags on the current/next conversation
   - `'setConversationFields'` — set custom fields on the current/next conversation
   - `'open'` / `'close'` / `'show'` / `'hide'` — control the Zendesk messenger widget

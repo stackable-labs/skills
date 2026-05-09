@@ -53,9 +53,10 @@ const viewState = useStore(appStore, (s) => s.viewState)
 ```
 
 ## useContextData()
-Reads host-provided context including extension settings. Returns `{ loading, customerId, customerEmail, settings, ... }`.
+Reads host-provided context including extension settings. Returns `{ loading, customerId, customerEmail, messaging, settings, ... }`. `messaging.conversationId` is the active Messaging conversation ID (or `null` until one exists).
 ```tsx
-const { loading, customerId, customerEmail, settings } = useContextData()
+const { loading, customerId, customerEmail, messaging, settings } = useContextData()
+const conversationId = messaging?.conversationId
 ```
 
 ## useSettings()
