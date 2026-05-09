@@ -1,6 +1,6 @@
 ---
 name: styling-and-theming
-description: "Host theme inheritance, className usage, layout components, and CSS constraints. Use when styling extension UI or working with the host theme."
+description: "Extension theming and styling - tailwind className usage, layout components, and CSS constraints. Use when styling extension UI or working with the host theme."
 ---
 
 # Styling & Theming

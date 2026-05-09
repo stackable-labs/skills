@@ -1,6 +1,6 @@
 ---
 name: add-capability
-description: "Wire up a new capability (data.fetch, data.query, context.read, actions.toast, actions.invoke) in this extension. Use when adding a new host-mediated API."
+description: "Wire up a new capability (data.fetch, data.query, context.read, actions.toast, actions.invoke) in this extension. Use when adding a new platform-mediated API."
 ---
 
 # Add a Capability

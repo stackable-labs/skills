@@ -29,6 +29,7 @@ Use with `<ui.Icon name="icon-name" />`.
 - `alert-circle`
 - `book-open`
 - `qr-code`
+- `image`
 - `image-off`
 - `circle-play`
 - `tv-minimal-play`

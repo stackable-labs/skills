@@ -1,6 +1,6 @@
 ---
 name: external-apis
-description: "Direct HTTP requests via data.fetch, allowedDomains configuration, and API wrapper patterns. Use when connecting an extension to external APIs."
+description: "Direct HTTP requests via data.fetch — allowed domains (including wildcard subdomains like *.myshopify.com), allowedDomains configuration, API wrapper patterns, and data.fetch vs data.query. Use when connecting an extension to external APIs or configuring allowedDomains."
 ---
 
 # External APIs
@@ -37,7 +37,7 @@ Every domain your extension calls must be listed in `allowedDomains`:
 - The framework will reject requests to unlisted domains
 - Add each subdomain separately when listing exact hosts (e.g., `api.example.com` and `cdn.example.com`)
 
-### Wildcards
+#### Wildcard Domains
 
 **Prefer exact hostnames where possible.** Use `*.example.com` only when you
 need to match any subdomain — for example, tenant-per-subdomain platforms

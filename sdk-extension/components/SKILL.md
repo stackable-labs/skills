@@ -10,7 +10,7 @@ Access all components via the `ui.*` namespace:
 import { ui } from '@stackable-labs/sdk-extension-react'
 ```
 
-**38 available components** — only use the attributes listed below for each component.
+**39 available components** — only use the attributes listed below for each component.
 
 ## Layout
 
@@ -132,13 +132,16 @@ Allowed attributes: `className`
 ### `<ui.Icon>` (`ui-icon`)
 Allowed attributes: `name`, `size`, `className`
 
+### `<ui.Image>` (`ui-image`)
+Allowed attributes: `src`, `alt`, `loading`, `width`, `height`, `className`
+
 ### `<ui.QRCode>` (`ui-qr-code`)
 Allowed attributes: `value`, `size`, `variant`, `level`, `alt`, `className`
 
 ### `<ui.Video>` (`ui-video`)
-Allowed attributes: `videoId`, `autoPlay`, `showControls`, `allowTracking`, `shape`, `className`, `title`
+Allowed attributes: `videoId`, `autoPlay`, `showControls`, `allowTracking`, `shape`, `title`, `className`
 
-## Available Icons (30)
+## Available Icons (31)
 
 Use with `<ui.Icon name="icon-name" />`. Valid icon names:
-`arrow-left`, `calendar`, `check-circle-2`, `chevron-left`, `chevron-right`, `clock`, `credit-card`, `external-link`, `help-circle`, `info`, `loader-2`, `mail`, `map-pin`, `message-circle`, `message-square`, `package`, `phone`, `search`, `shopping-bag`, `sparkles`, `truck`, `user`, `video`, `x-circle`, `alert-circle`, `book-open`, `qr-code`, `image-off`, `circle-play`, `tv-minimal-play`
+`arrow-left`, `calendar`, `check-circle-2`, `chevron-left`, `chevron-right`, `clock`, `credit-card`, `external-link`, `help-circle`, `info`, `loader-2`, `mail`, `map-pin`, `message-circle`, `message-square`, `package`, `phone`, `search`, `shopping-bag`, `sparkles`, `truck`, `user`, `video`, `x-circle`, `alert-circle`, `book-open`, `qr-code`, `image`, `image-off`, `circle-play`, `tv-minimal-play`

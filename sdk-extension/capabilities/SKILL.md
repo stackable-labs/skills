@@ -1,6 +1,6 @@
 ---
 name: capabilities
-description: "Extension capabilities: data.query, data.fetch, context.read, actions.toast, actions.invoke. Use when wiring up host-mediated APIs or direct HTTP requests."
+description: "Extension capabilities: data.query, data.fetch, context.read, actions.toast, actions.invoke. Use when wiring up platform-mediated APIs or direct HTTP requests."
 ---
 
 # Capabilities
