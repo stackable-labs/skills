@@ -149,11 +149,19 @@ Subscribe to real-time identity events (login, logout, refresh, expired) pushed 
 ```tsx
 import { useIdentityEvent } from '@stackable-labs/sdk-extension-react'
 
+// manifest events: ["identity:login", "identity:logout", "identity:refresh"]
 useIdentityEvent('login', (event) => {
-  console.log('User logged in:', event.data.state.user?.email)
+  // event.data.state.user.metadata is populated with any enrichment from sibling
+  // extensions with identity:extend (declared in their manifest.identityClaims)
+  console.log('User logged in:', event.data.state.user?.email, event.data.state.user?.metadata)
 })
 useIdentityEvent('logout', () => {
   console.log('User logged out')
+})
+// identity:refresh fires after any extension calls capabilities.identity.extend({...}).
+// Listen here to react to post-login enrichment (verification, tier upgrades, etc.).
+useIdentityEvent('refresh', (event) => {
+  console.log('Identity refreshed — metadata:', event.data.state.user?.metadata)
 })
 ```
 
@@ -220,24 +228,118 @@ useActivityEvent('product_view', (event) => {
 
 **Generic alternative:** `useEvent('activity:product_view', handler)` — a cross-domain hook that accepts fully-qualified event types. Domain wildcard (e.g., `'activity'`) receives all events in that domain.
 
-## extend:identity — Identity Claim Enrichment
-Enrich identity JWT claims before signing. The framework sends base claims to your extension, and you return additional claims to merge into the token.
-- **Permission required:** `extend:identity`
+## identity.extend — Identity Claim Enrichment
+Enrich identity JWT claims and `identityState.user.metadata` so the current user's signed token AND any sibling extension can react to them. Two complementary APIs:
+
+1. **`useExtendIdentity(handler)`** — synchronous hook that fires ONCE at initial login.
+2. **`capabilities.identity.extend(patch)`** — imperative call that fires at any time after login (post-verification, post-checkout, any user-triggered async flow). Re-signs the JWT, updates `user.metadata`, and broadcasts `identity:refresh`.
+
+Both share the **`identity:extend`** permission and the **`manifest.identityClaims`** declaration gate.
+
+### Manifest contract
+
+```json
+{
+  "permissions": ["identity:extend"],
+  "identityClaims": ["loyalty_tier", "verified", "verified_by", "verified_at"]
+}
+```
+
+- **Standard JWT claims (`external_id`, `email`, `name`) are exempt** — they're part of the signing contract and may be overridden without declaration.
+- **Custom keys MUST be declared in `identityClaims`** or the host filter drops them with a `console.warn`.
+- **Reserved JWT/Zendesk keys** (`iss`, `sub`, `aud`, `exp`, `nbf`, `iat`, `jti`, `scope`, `email_verified`, `user_fields`) **cannot** appear in `identityClaims` — the Lambda sanitizer always wins on collision.
+- **Key format:** `/^[a-z_][a-z0-9_]{0,63}$/` (lowercase identifier, ≤64 chars).
+- **Maximum 20 entries.**
+
+### Initial-login enrichment (handler-style)
+
 - **Hook:** `useExtendIdentity(handler)` — `ExtendIdentityHandler` type exported for use with `useCallback`
 - **Handler signature:** `(claims: IdentityBaseClaims) => Record<string, unknown> | Promise<Record<string, unknown>>`
 - **IdentityBaseClaims:** `{ external_id: string, email?: string, name?: string, [key: string]: unknown }`
 
-```json
-{
-  "permissions": ["extend:identity"]
-}
-```
-
 ```tsx
 import { useExtendIdentity } from '@stackable-labs/sdk-extension-react'
 
+// manifest.json:
+//   {
+//     "permissions": ["identity:extend"],
+//     "identityClaims": ["loyalty_tier", "verified", "verified_by", "verified_at"]
+//   }
+// Standard JWT claims (external_id, email, name) are exempt from declaration.
+// Custom claims must be in manifest.identityClaims or they're dropped with a warn.
+//
+// Fires ONCE at initial login — return what's known synchronously. For post-login
+// async updates (e.g., after verification completes via a webhook or polling),
+// use capabilities.identity.extend(patch) — see the 'identity.extend' capability.
 useExtendIdentity((claims) => ({
-  external_id: `custom_${claims.external_id}`,
-  loyalty_tier: 'gold',
+  external_id: `custom_${claims.external_id}`,   // standard claim override (exempt)
+  loyalty_tier: 'bronze',                           // custom — sync, known at login
+  verified: false,                                  // custom — default; updated async post-verification
 }))
 ```
+
+### Async post-login push (imperative)
+
+```tsx
+const capabilities = useCapabilities()
+
+// Anytime after login — webhook callback, user action, async verification, etc.
+await capabilities.identity.extend({
+  verified: true,
+  verified_by: 'xyzProvider',
+  verified_at: new Date().toISOString(),
+})
+// → host filters against manifest.identityClaims
+// → user.metadata updated
+// → JWT re-signed, pushed to Zendesk loginUser
+// → identity:refresh broadcast to all extensions with events:identity
+```
+
+Per-extension calls are serialized to prevent concurrent Zendesk `loginUser` callbacks from orphaning each other (empirically verified in the loginUser re-auth spike).
+
+### Consuming enriched state from another extension
+
+Any extension with `events:identity` permission can react to enrichment updates. Same minimal pattern as the `events:identity` section above — `'login'` covers the initial enriched state, `'refresh'` covers post-login pushes:
+
+```tsx
+import { useIdentityEvent } from '@stackable-labs/sdk-extension-react'
+
+// manifest events: ["identity:login", "identity:logout", "identity:refresh"]
+useIdentityEvent('login', (event) => {
+  // event.data.state.user.metadata is populated with any enrichment from sibling
+  // extensions with identity:extend (declared in their manifest.identityClaims)
+  console.log('User logged in:', event.data.state.user?.email, event.data.state.user?.metadata)
+})
+useIdentityEvent('logout', () => {
+  console.log('User logged out')
+})
+// identity:refresh fires after any extension calls capabilities.identity.extend({...}).
+// Listen here to react to post-login enrichment (verification, tier upgrades, etc.).
+useIdentityEvent('refresh', (event) => {
+  console.log('Identity refreshed — metadata:', event.data.state.user?.metadata)
+})
+```
+
+For a snapshot read instead of event-driven reaction (auto re-renders when context changes):
+
+```tsx
+const { identity } = useContextData()
+const verified = Boolean(identity?.user?.metadata?.verified)
+```
+
+### Install-time enforcement
+
+Two enabled extensions on the same instance **MUST NOT** declare overlapping `identityClaims` keys. The runtime merge is order-dependent (`Object.assign` across per-extension contributions), so one extension's value would silently overwrite the other's. The marketplace install API blocks the install with a 409 conflict, surfacing the specific overlapping key + conflicting extension name in the admin install dialog. Coordinate keys with downstream extensions or namespace them (e.g. `<vendor>_loyalty_tier`).
+
+### Bundle-scan findings at upload
+
+The publisher-side bundle scan validates your declaration at submission time:
+
+| Finding | Severity | Triggers when |
+| --- | --- | --- |
+| `identityClaims_missing` | warning | `identity:extend` declared, `identityClaims` empty (custom claims would be dropped) |
+| `identityClaims_no_permission` | warning | `identityClaims` declared, `identity:extend` permission missing |
+| `identityClaims_invalid_key` | error | Key fails the format regex |
+| `identityClaims_reserved_key` | error | Collides with a reserved JWT / Zendesk claim |
+| `identityClaims_standard_key` | warning | Redundant — standard claims (`external_id`, `email`, `name`) are exempt |
+| `identityClaims_too_many` | error | More than 20 entries |

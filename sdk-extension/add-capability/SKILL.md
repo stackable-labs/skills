@@ -14,7 +14,7 @@ Ask which capability to add. Valid capabilities:
 - `context.read` — read host-provided context (customerId, customerEmail, messaging.conversationId, etc.)
 - `actions.toast` — show toast notifications (success, error, info, warning)
 - `actions.invoke` — invoke host actions (e.g., open new conversation)
-- `extend:identity` — enrich identity JWT claims before signing
+- `identity.extend` — enrich identity JWT claims before signing
 - `events:identity` — subscribe to identity events (login, logout, refresh, expired)
 - `events:messaging` — subscribe to messaging events (postback button clicks)
 - `events:activity` — subscribe to activity events (page views, clicks, purchases)
@@ -26,7 +26,7 @@ Add the corresponding permission to `packages/extension/public/manifest.json`:
 - `context.read` → `"context:read"`
 - `actions.toast` → `"actions:toast"`
 - `actions.invoke` → `"actions:invoke"`
-- `extend:identity` → `"extend:identity"`
+- `identity.extend` → `"identity:extend"`
 - `events:identity` → `"events:identity"` (also add entries to `events` array, e.g. `["identity:login", "identity:logout"]`)
 - `events:messaging` → `"events:messaging"` (also add entries to `events` array, e.g. `["messaging:postback:Buy Now"]`)
 - `events:activity` → `"events:activity"` (also add entries to `events` array, e.g. `["activity:product_view"]`)
@@ -68,18 +68,32 @@ const capabilities = useCapabilities()
 // actions.invoke: capabilities.actions.invoke('newConversation', { tags: ['order'], fields: [{ id: 'field_id', value: 'val' }] })
 ```
 
-### For events and extend — ALWAYS use dedicated hooks (INSTEAD of useCapabilities direct):
-**IMPORTANT:** Event and extend capabilities have their own React hooks. Never use `capabilities.events.*` or `capabilities.extend.*` — those do not exist.
+### Special handling (events + identity.extend):
+
+#### For events — ALWAYS use dedicated hooks (INSTEAD of useCapabilities direct):
+Events are subscribed via `useIdentityEvent` / `useMessagingEvent` / `useActivityEvent` — never use `capabilities.events.*` directly (events are not part of the `capabilities` object).
+
+#### For identity.extend — choose the CORRECT option:
+- **`useExtendIdentity(handler)`** — synchronous hook, fires only once at initial login. ALWAYS use for known-at-login enrichment.
+- **`capabilities.identity.extend(patch)`** — imperative call via `useCapabilities()`, fires post-login (after async verification, webhook callbacks, user-triggered flows). Re-signs the JWT and broadcasts `identity:refresh`.
 
 ```tsx
 // events:identity — use useIdentityEvent hook
 import { useIdentityEvent } from '@stackable-labs/sdk-extension-react'
 
+// manifest events: ["identity:login", "identity:logout", "identity:refresh"]
 useIdentityEvent('login', (event) => {
-  console.log('User logged in:', event.data.state.user?.email)
+  // event.data.state.user.metadata is populated with any enrichment from sibling
+  // extensions with identity:extend (declared in their manifest.identityClaims)
+  console.log('User logged in:', event.data.state.user?.email, event.data.state.user?.metadata)
 })
 useIdentityEvent('logout', () => {
   console.log('User logged out')
+})
+// identity:refresh fires after any extension calls capabilities.identity.extend({...}).
+// Listen here to react to post-login enrichment (verification, tier upgrades, etc.).
+useIdentityEvent('refresh', (event) => {
+  console.log('Identity refreshed — metadata:', event.data.state.user?.metadata)
 })
 ```
 
@@ -102,13 +116,48 @@ useActivityEvent('product_view', (event) => {
 ```
 
 ```tsx
-// extend:identity — use useExtendIdentity hook
-import { useExtendIdentity } from '@stackable-labs/sdk-extension-react'
+// identity.extend — login-time useExtendIdentity hook OR post-login imperative capabilities.identity.extend
+// Enrich identity JWT claims before signing.
+// The host sends base claims (external_id, email, name); your handler returns
+// additional claims to merge. Returned keys are filtered against manifest.identityClaims:
+//   - Standard JWT claims (external_id, email, name) are exempt — always allowed
+//   - Custom claims must be declared in manifest.identityClaims
+//   - Undeclared keys are dropped with a console.warn
+// Merged claims land in BOTH identityState.user.metadata (for sibling extensions)
+// AND the signed JWT's custom_claims (for downstream JWT consumers).
+// Pattern: name the handler with useCallback<ExtendIdentityHandler> for stable
+// reference + clean separation; pass the named const to useExtendIdentity.
+//
+// useExtendIdentity fires ONCE at initial login — return what's known synchronously.
+// For post-login async updates (e.g., after verification completes via a webhook
+// or polling), use capabilities.identity.extend(patch) — see the 'identity.extend'
+// capability for the imperative path.
 
-useExtendIdentity((claims) => ({
-  external_id: `custom_${claims.external_id}`,
-  loyalty_tier: 'gold',
-}))
+import { useCallback } from 'react'
+import { useExtendIdentity } from '@stackable-labs/sdk-extension-react'
+import type { ExtendIdentityHandler } from '@stackable-labs/sdk-extension-contracts'
+
+// manifest.json:
+//   {
+//     "permissions": ["identity:extend"],
+//     "identityClaims": ["loyalty_tier", "verified", "verified_by", "verified_at"]
+//   }
+const handleExtend = useCallback<ExtendIdentityHandler>((claims) => ({
+  external_id: `custom_${claims.external_id}`,   // standard claim override (exempt)
+  loyalty_tier: 'bronze',                           // custom — sync, known at login
+  verified: false,                                  // custom — default; updated async post-verification
+}), [])
+useExtendIdentity(handleExtend)
+
+// ── For post-login async push (e.g., after async verification completes): ─────
+const capabilities = useCapabilities()
+await capabilities.identity.extend({ verified: true })
+
+// Consumer side — same or sibling extension reacts via identity:refresh
+useIdentityEvent('refresh', (event) => {
+  console.log('verified =>', event.data.state.user?.metadata?.verified)
+})
+
 ```
 
 ## 6. Verify
@@ -116,4 +165,4 @@ useExtendIdentity((claims) => ({
 - If data.fetch, confirm the domain is in allowedDomains
 - For data/context/actions: confirm accessed via `useCapabilities()` hook
 - For events: confirm using `useIdentityEvent`, `useMessagingEvent`, or `useActivityEvent` hooks
-- For extend: confirm using `useExtendIdentity` hook
+- For identity.extend: confirm using `useExtendIdentity` hook (login-time) and/or `capabilities.identity.extend(patch)` (imperative post-login)

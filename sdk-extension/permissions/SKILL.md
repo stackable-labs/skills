@@ -14,10 +14,10 @@ Declare permissions in `manifest.json` before using the corresponding capability
 - `data:fetch`
 - `actions:toast`
 - `actions:invoke`
+- `identity:extend`
 - `events:identity`
 - `events:messaging`
 - `events:activity`
-- `extend:identity`
 
 ## Capability → Permission Mapping
 
@@ -28,7 +28,7 @@ Declare permissions in `manifest.json` before using the corresponding capability
 | `data.fetch` | `data:fetch` |
 | `actions.toast` | `actions:toast` |
 | `actions.invoke` | `actions:invoke` |
-| `extend.identity` | `extend:identity` |
+| `identity.extend` | `identity:extend` |
 
 ## Target → Permission Conventions
 

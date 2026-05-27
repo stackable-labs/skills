@@ -43,7 +43,7 @@ const capabilities = useCapabilities()
 // capabilities.data.fetch(url, init?)
 // capabilities.actions.toast(payload)
 // capabilities.actions.invoke(action, payload?) — actions: newConversation, setConversationTags, setConversationFields, open, close, show, hide
-// capabilities.extend.identity(payload) — enrich identity claims (prefer useExtendIdentity hook)
+// capabilities.identity.extend(patch) — push enrichment claims to user.metadata + JWT custom_claims (imperative; for handler-style at login, use useExtendIdentity hook). Each patch key MUST be declared in manifest.identityClaims or the host filter drops it.
 ```
 
 ## useStore(store, selector?)
@@ -97,11 +97,19 @@ Subscribe to identity events pushed from the host via the framework. Requires `e
 - `IdentityState: { authenticated: boolean, user: UserIdentity | null, expiresAt?: string }`
 
 ```tsx
+// manifest events: ["identity:login", "identity:logout", "identity:refresh"]
 useIdentityEvent('login', (event) => {
-  console.log('User logged in:', event.data.state.user?.email)
+  // event.data.state.user.metadata is populated with any enrichment from sibling
+  // extensions with identity:extend (declared in their manifest.identityClaims)
+  console.log('User logged in:', event.data.state.user?.email, event.data.state.user?.metadata)
 })
 useIdentityEvent('logout', () => {
   console.log('User logged out')
+})
+// identity:refresh fires after any extension calls capabilities.identity.extend({...}).
+// Listen here to react to post-login enrichment (verification, tier upgrades, etc.).
+useIdentityEvent('refresh', (event) => {
+  console.log('Identity refreshed — metadata:', event.data.state.user?.metadata)
 })
 ```
 
@@ -157,14 +165,26 @@ useEvent('activity', (event) => {
 ```
 
 ## useExtendIdentity(handler)
-Register a handler to enrich identity JWT claims before signing. Requires `extend:identity` permission.
+Register a handler to enrich identity JWT claims before signing. Requires `identity:extend` permission.
 - `handler: ExtendIdentityHandler` — `(claims: IdentityBaseClaims) => Record<string, unknown> | Promise<Record<string, unknown>>`
 - `IdentityBaseClaims: { external_id: string, email?: string, name?: string, [key: string]: unknown }`
 
 ```tsx
+// manifest.json:
+//   {
+//     "permissions": ["identity:extend"],
+//     "identityClaims": ["loyalty_tier", "verified", "verified_by", "verified_at"]
+//   }
+// Standard JWT claims (external_id, email, name) are exempt from declaration.
+// Custom claims must be in manifest.identityClaims or they're dropped with a warn.
+//
+// Fires ONCE at initial login — return what's known synchronously. For post-login
+// async updates (e.g., after verification completes via a webhook or polling),
+// use capabilities.identity.extend(patch) — see the 'identity.extend' capability.
 useExtendIdentity((claims) => ({
-  external_id: `custom_${claims.external_id}`,
-  loyalty_tier: 'gold',
+  external_id: `custom_${claims.external_id}`,   // standard claim override (exempt)
+  loyalty_tier: 'bronze',                           // custom — sync, known at login
+  verified: false,                                  // custom — default; updated async post-verification
 }))
 ```
 
@@ -174,9 +194,15 @@ import { useCallback } from 'react'
 import { useExtendIdentity } from '@stackable-labs/sdk-extension-react'
 import type { ExtendIdentityHandler } from '@stackable-labs/sdk-extension-contracts'
 
+// manifest.json:
+//   {
+//     "permissions": ["identity:extend"],
+//     "identityClaims": ["loyalty_tier", "verified", "verified_by", "verified_at"]
+//   }
 const handleExtend = useCallback<ExtendIdentityHandler>((claims) => ({
-  external_id: `custom_${claims.external_id}`,
-  loyalty_tier: 'gold',
+  external_id: `custom_${claims.external_id}`,   // standard claim override (exempt)
+  loyalty_tier: 'bronze',                           // custom — sync, known at login
+  verified: false,                                  // custom — default; updated async post-verification
 }), [])
 useExtendIdentity(handleExtend)
 ```

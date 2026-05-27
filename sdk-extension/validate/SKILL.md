@@ -24,7 +24,7 @@ Read `packages/extension/public/manifest.json` and verify:
 - [ ] `name` is a non-empty string
 - [ ] `version` follows semver (e.g., "1.0.0")
 - [ ] `targets` is a non-empty array of valid target strings (slot.header, slot.content, slot.footer, slot.footer-links)
-- [ ] `permissions` contains only valid permission strings (context:read, data:query, data:fetch, actions:toast, actions:invoke, events:identity, events:messaging, events:activity, extend:identity)
+- [ ] `permissions` contains only valid permission strings (context:read, data:query, data:fetch, actions:toast, actions:invoke, identity:extend, events:identity, events:messaging, events:activity)
 - [ ] `allowedDomains` is an array (can be empty if data:fetch is not used)
 - [ ] If `data:fetch` permission is declared, `allowedDomains` is not empty
 
@@ -35,7 +35,7 @@ Scan all `.tsx` files in `packages/extension/src/` for capability usage:
 - `capabilities.context.read` or `useContextData` → needs `context:read` permission
 - `capabilities.actions.toast` → needs `actions:toast` permission
 - `capabilities.actions.invoke` → needs `actions:invoke` permission
-- `useExtendIdentity` → needs `extend:identity` permission
+- `useExtendIdentity` or `capabilities.identity.extend` → needs `identity:extend` permission AND every custom key returned by the handler / passed to `extend(patch)` MUST be declared in `manifest.identityClaims` (standard JWT claims `external_id` / `email` / `name` are exempt). Undeclared keys are dropped by the host filter with a `console.warn`.
 - `useIdentityEvent` → needs `events:identity` permission (also check manifest `events` array has matching entries)
 - `useMessagingEvent` → needs `events:messaging` permission (also check manifest `events` array has matching entries)
 - `useActivityEvent` → needs `events:activity` permission (also check manifest `events` array has matching entries)
@@ -43,6 +43,7 @@ Scan all `.tsx` files in `packages/extension/src/` for capability usage:
 Report:
 - **Missing permissions:** capabilities used in code but not declared in manifest
 - **Unused permissions:** permissions declared in manifest but not used in code
+- **Undeclared identityClaims:** keys returned from `useExtendIdentity` or passed to `capabilities.identity.extend` that are not in `manifest.identityClaims` (excluding the standard-claim exemption list)
 
 ## 3. Surface-to-target matching
 - Each `.tsx` file with a `<Surface id="...">` should have a matching target in manifest.json
