@@ -69,7 +69,7 @@ export function Content() {
 
   return (
     <Surface id="slot.content">
-      {viewState.type === 'menu' && (
+      {(viewState.type === 'menu') && (
         <ui.Menu>
           {/* Add ui.MenuItem entries here */}
         </ui.Menu>

@@ -108,7 +108,7 @@ export const Content = () => {
       <ui.Card>
         <ui.CardContent>
           <ui.Text>Looking up orders…</ui.Text>
-          {environmentType === 'sandbox' && (
+          {(environmentType === 'sandbox') && (
             <ui.Text className="text-xs opacity-50">Sandbox Mode</ui.Text>
           )}
         </ui.CardContent>

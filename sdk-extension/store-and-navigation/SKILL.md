@@ -81,7 +81,7 @@ export const Header = () => {
   return (
     <Surface id="slot.header">
       <ui.Inline>
-        {viewState.type !== 'list' && (
+        {(viewState.type !== 'list') && (
           <ui.Button
             variant="ghost"
             onClick={() => appStore.set({ viewState: { type: 'list' } })}
