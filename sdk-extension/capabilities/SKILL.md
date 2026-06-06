@@ -295,7 +295,7 @@ await capabilities.identity.extend({
 // → identity:refresh broadcast to all extensions with events:identity
 ```
 
-Per-extension calls are serialized to prevent concurrent Zendesk `loginUser` callbacks from orphaning each other (empirically verified in the loginUser re-auth spike).
+Per-extension calls are serialized to prevent concurrent `loginUser` callbacks from orphaning each other.
 
 ### Consuming enriched state from another extension
 
@@ -343,3 +343,120 @@ The publisher-side bundle scan validates your declaration at submission time:
 | `identityClaims_reserved_key` | error | Collides with a reserved JWT / Zendesk claim |
 | `identityClaims_standard_key` | warning | Redundant — standard claims (`external_id`, `email`, `name`) are exempt |
 | `identityClaims_too_many` | error | More than 20 entries |
+
+## messaging.send — Send Messages to Conversations
+
+Post a message into the **active conversation** bound to the current Instance. The host attributes each message to the extension via the per-Instance author label set by the admin (see "Author label" below). Two complementary APIs:
+
+1. **`useMessaging()`** — React hook returning tuple `[send, { loading, error, data }]` — lets callers rename `send` per-instance when used multiple times in one component. Preferred for UI components; narrows the error surface to actionable codes only.
+2. **`messagingSendCapability(payload)`** / **`capabilities.messaging.send(payload)`** — imperative; useful outside React render. Exposes the full wire-level error taxonomy.
+
+### Manifest contract
+
+```json
+{
+  "permissions": ["messaging:send"]
+}
+```
+
+- **`messaging:send` permission** — without it the host gate rejects the call before any network request.
+
+### Author label (host-resolved, per-Instance)
+
+Extensions do **not** set the author label. The host resolves it from:
+1. `instance.config.settings.messagingDisplayName` — admin sets via the dashboard Instance form (visible only after OAuth completes; gated on `messagingAppId` being populated)
+2. **Fallback**: `extension.manifest.name` — used when admin hasn't set a label
+
+This prevents impersonation (extension A can't author as extension B) and gives admins per-deployment branding control.
+
+### Runtime requirements
+
+1. **Instance connected to a messaging provider** — bearer token stored, ready to post
+2. **An active conversation** when `send()` is called (else host-handled `no_conversation` — `send()` returns `null`)
+3. **Instance not disconnected** from the messaging provider (else host-handled `reauth_required` — admin reconnect surfaced in dashboard)
+
+### Payload — discriminated by `kind`
+
+Four kinds:
+
+| kind | Required fields | Optional |
+|---|---|---|
+| `'text'` | `body: string` | `actions?: MessageItemAction[]`, `metadata?`, `htmlText?`, `markdownText?`, `disableUserInput?` |
+| `'image'` | `url: string`, `altText: string` | `body?`, `actions?`, `metadata?` |
+| `'file'` | `url: string`, `altText: string` | `body?`, `metadata?` (no `actions` — file kind doesn't accept item-level actions) |
+| `'carousel'` | `items: [MessageItem, ...MessageItem[]]` (1–10 items, each with `title`, `description?`, `imageUrl?`, `actions?`) | `displaySettings?: { imageAspectRatio?: 'square' \| 'horizontal' }` |
+
+**Action types** (per-item or per-message): `reply` (quick-reply button — emits postback to `useMessagingEvent`), `link` (opens URL), `postback` (custom payload to your handler), `locationRequest` (asks user for location).
+
+### Hook usage
+
+```tsx
+import { useMessaging, useContextData } from '@stackable-labs/sdk-extension-react'
+
+const { messaging } = useContextData()
+const [send, { loading, error }] = useMessaging()
+
+// Proactive gate: skip the call when there's no conversation — avoids the
+// host-handled no_conversation log + null return.
+const canSend = !!messaging?.conversationId
+
+const onApprove = async () => {
+  try {
+    await send({
+      kind: 'text',
+      body: 'Order approved ✓',
+      actions: [{ type: 'reply', label: 'Got it', payload: 'ACK' }],
+    })
+  } catch {
+    // error holds the typed SendMessageActionableErrorCode
+  }
+}
+
+if (error === 'rate_limited') {
+  // Render a "slow down" notice
+}
+```
+
+### Imperative usage
+
+```tsx
+const capabilities = useCapabilities()
+const result = await capabilities.messaging.send({ kind: 'text', body: 'Hello' })
+// result is either { messageId, receivedAt } OR { error: SendMessageErrorCode }
+```
+
+### Typed error codes — split by who acts
+
+The wire taxonomy has 6 codes. The hook (`useMessaging`) narrows them into two groups:
+
+**Actionable (extension catches + renders UI)** — `send()` throws and `state.error` is populated:
+
+| Code | When |
+| --- | --- |
+| `invalid_message` | Payload failed validation (e.g. empty `body` for text, carousel >10 items, list kind sent) |
+| `rate_limited` | Upstream rate limit hit — back off + retry |
+| `upstream_error` | Provider returned 5xx — transient; retry with backoff |
+
+**Host-handled (extension ignores)** — `send()` resolves to `null`, `state.error` stays `null`, SDK logs a breadcrumb:
+
+| Code | What the framework does |
+| --- | --- |
+| `no_conversation` | `console.info` — pre-empt via `useContextData().messaging?.conversationId` |
+| `reauth_required` | `console.warn` — admin sees a "Reconnect" CTA in the dashboard (server flips `messagingDisconnected: true`) |
+| `forbidden` | `console.warn` — should not reach in production with correct manifest |
+
+The imperative `messagingSendCapability` path returns the full taxonomy without the actionable/host-handled split — useful when you need every code (e.g. dynamic dispatch).
+
+### Defense-in-depth gates
+
+Three gates fire in series, surfacing the same `forbidden` error if any blocks:
+
+1. **Embeddable host gate** (`CapabilityRPCHandler`) — checks `sandbox.manifest.permissions.includes('messaging:send')` before the call leaves the sandbox.
+2. **Backend handler gate** — checks `claims.permissions?.includes('messaging:send')` on the proxy-token JWT.
+3. **Server-side instance check** — `instance.config.messagingDisconnected` short-circuits with `reauth_required` before any upstream call.
+
+### Receiving replies — pair with `events:messaging`
+
+`reply` and `postback` action clicks fire on extensions with the `events:messaging` permission via `useMessagingEvent` — see the `events:messaging` section above.
+
+> **Note:** the postback `payload` field is currently not surfaced by the Web Widget (only the button text `actionName`). Until that gap is closed, design action labels to be self-describing or pair sends with a follow-up `data.query` lookup.

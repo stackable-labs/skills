@@ -44,6 +44,7 @@ const capabilities = useCapabilities()
 // capabilities.actions.toast(payload)
 // capabilities.actions.invoke(action, payload?) — actions: newConversation, setConversationTags, setConversationFields, open, close, show, hide
 // capabilities.identity.extend(patch) — push enrichment claims to user.metadata + JWT custom_claims (imperative; for handler-style at login, use useExtendIdentity hook). Each patch key MUST be declared in manifest.identityClaims or the host filter drops it.
+// capabilities.messaging.send(payload) — post a message into the active conversation bound to this Instance. Requires messaging:send permission. Author label is admin-set per-Instance (instance.config.settings.messagingDisplayName) with extension.manifest.name fallback. For React state ([send, { loading, error, data }]), prefer the useMessaging hook.
 ```
 
 ## useStore(store, selector?)
@@ -212,4 +213,33 @@ Identity state is available in the `context.read()` response as an `identity` fi
 ```tsx
 const context = await capabilities.context.read()
 // context.identity — { authenticated, user, expiresAt? }
+```
+
+## useMessaging()
+Send messages into the active conversation bound to this Instance. Wraps the `messaging.send` capability with React state, tracking `loading` / `error` / `data`. Returns a tuple `[send, state]` so callers can rename `send` when the hook is used multiple times in one component. Requires `messaging:send` permission. The author label rendered above outbound messages is set per-Instance by the admin (Instance settings `messagingDisplayName`); falls back to `extension.manifest.name` when blank.
+
+- **Returns:** `readonly [send, { loading, error, data }]`
+- **`send(payload: SendMessagePayload): Promise<SendMessageResponse | null>`** — returns the response on success; throws on **actionable** errors; resolves to `null` on host-handled errors (SDK logs a breadcrumb, host surfaces remediation)
+- **`loading: boolean`** — true while a call is in flight (matches `useContextData`'s `loading` for SDK-wide consistency)
+- **`data: SendMessageResponse | null`** — `{ messageId, receivedAt }` from last successful send
+- **`error: SendMessageActionableErrorCode | null`** — one of `invalid_message` / `rate_limited` / `upstream_error` after a failed send. Host-handled codes (`no_conversation` / `reauth_required` / `forbidden`) never surface here.
+
+Payload is discriminated by `kind`: `'text'` / `'image'` / `'file'` / `'carousel'`. See the `messaging.send` capability section for the full payload table + action types.
+
+```tsx
+import { useMessaging, useContextData } from '@stackable-labs/sdk-extension-react'
+
+const { messaging } = useContextData()
+const [send, { loading, error }] = useMessaging()
+
+// Proactive gate: skip the call when there's no conversation
+const canSend = !!messaging?.conversationId
+
+const onApprove = async () => {
+  try {
+    await send({ kind: 'text', body: 'Approved ✓' })
+  } catch {
+    // error holds the typed SendMessageActionableErrorCode
+  }
+}
 ```
