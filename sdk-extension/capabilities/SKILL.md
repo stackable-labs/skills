@@ -348,7 +348,7 @@ The publisher-side bundle scan validates your declaration at submission time:
 
 Post a message into the **active conversation** bound to the current Instance. The host attributes each message to the extension via the per-Instance author label set by the admin (see "Author label" below). Two complementary APIs:
 
-1. **`useMessaging()`** — React hook returning tuple `[send, { loading, error, data }]` — lets callers rename `send` per-instance when used multiple times in one component. Preferred for UI components; narrows the error surface to actionable codes only.
+1. **`useMessaging()`** — React hook returning tuple `[send, { enabled, loading, error, data }]` — lets callers rename `send` per-instance when used multiple times in one component. Preferred for UI components; narrows the error surface to actionable codes only. Use `enabled` to pre-empt the silent `no_conversation` case **without** declaring `context:read`.
 2. **`messagingSendCapability(payload)`** / **`capabilities.messaging.send(payload)`** — imperative; useful outside React render. Exposes the full wire-level error taxonomy.
 
 ### Manifest contract
@@ -391,14 +391,9 @@ Four kinds:
 ### Hook usage
 
 ```tsx
-import { useMessaging, useContextData } from '@stackable-labs/sdk-extension-react'
+import { useMessaging } from '@stackable-labs/sdk-extension-react'
 
-const { messaging } = useContextData()
-const [send, { loading, error }] = useMessaging()
-
-// Proactive gate: skip the call when there's no conversation — avoids the
-// host-handled no_conversation log + null return.
-const canSend = !!messaging?.conversationId
+const [send, { enabled, loading, error }] = useMessaging()
 
 const onApprove = async () => {
   try {
@@ -412,10 +407,14 @@ const onApprove = async () => {
   }
 }
 
-if (error === 'rate_limited') {
-  // Render a "slow down" notice
-}
+return (
+  <button disabled={!enabled || loading} onClick={onApprove}>
+    {error === 'rate_limited' ? 'Slow down…' : 'Approve'}
+  </button>
+)
 ```
+
+The `enabled` flag is a permission-free, host-pushed signal — `true` whenever an active conversation exists. Wiring buttons to `disabled={!enabled || loading}` pre-empts the silent `no_conversation` case without forcing the extension to declare `context:read`. If the extension already has `context:read` for other reasons, `useContextData().messaging?.conversationId` is an equivalent gate.
 
 ### Imperative usage
 
@@ -441,7 +440,7 @@ The wire taxonomy has 6 codes. The hook (`useMessaging`) narrows them into two g
 
 | Code | What the framework does |
 | --- | --- |
-| `no_conversation` | `console.info` — pre-empt via `useContextData().messaging?.conversationId` |
+| `no_conversation` | `console.info` — pre-empt via the `enabled` flag from `useMessaging()` (no permission needed) |
 | `reauth_required` | `console.warn` — admin sees a "Reconnect" CTA in the dashboard (server flips `messagingDisconnected: true`) |
 | `forbidden` | `console.warn` — should not reach in production with correct manifest |
 
@@ -459,4 +458,4 @@ Three gates fire in series, surfacing the same `forbidden` error if any blocks:
 
 `reply` and `postback` action clicks fire on extensions with the `events:messaging` permission via `useMessagingEvent` — see the `events:messaging` section above.
 
-> **Note:** the postback `payload` field is currently not surfaced by the Web Widget (only the button text `actionName`). Until that gap is closed, design action labels to be self-describing or pair sends with a follow-up `data.query` lookup.
+> **Note:** the postback `payload` field is currently not surfaced by the Web Widget (only the button text `actionName`). Until that gap is closed, design action labels to be self-describing or pair sends with a follow-up `data.fetch` lookup.

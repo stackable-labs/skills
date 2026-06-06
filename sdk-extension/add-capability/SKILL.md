@@ -14,6 +14,7 @@ Ask which capability to add. Valid capabilities:
 - `context.read` — read host-provided context (customerId, customerEmail, messaging.conversationId, etc.)
 - `actions.toast` — show toast notifications (success, error, info, warning)
 - `actions.invoke` — invoke host actions (e.g., open new conversation)
+- `messaging.send` — send messages into the active conversation bound to this Instance (text/image/file/carousel + reply/link/postback actions)
 - `identity.extend` — enrich identity JWT claims before signing
 - `events:identity` — subscribe to identity events (login, logout, refresh, expired)
 - `events:messaging` — subscribe to messaging events (postback button clicks)
@@ -26,6 +27,7 @@ Add the corresponding permission to `packages/extension/public/manifest.json`:
 - `context.read` → `"context:read"`
 - `actions.toast` → `"actions:toast"`
 - `actions.invoke` → `"actions:invoke"`
+- `messaging.send` → `"messaging:send"`
 - `identity.extend` → `"identity:extend"`
 - `events:identity` → `"events:identity"` (also add entries to `events` array, e.g. `["identity:login", "identity:logout"]`)
 - `events:messaging` → `"events:messaging"` (also add entries to `events` array, e.g. `["messaging:postback:Buy Now"]`)
@@ -68,12 +70,15 @@ const capabilities = useCapabilities()
 // actions.invoke: capabilities.actions.invoke('newConversation', { tags: ['order'], fields: [{ id: 'field_id', value: 'val' }] })
 ```
 
-### Special handling (events + identity.extend):
+### Special handling (events + identity.extend + messaging.send):
 
 #### For events — ALWAYS use dedicated hooks (INSTEAD of useCapabilities direct):
 Events are subscribed via `useIdentityEvent` / `useMessagingEvent` / `useActivityEvent` — never use `capabilities.events.*` directly (events are not part of the `capabilities` object).
 
-#### For identity.extend — choose the CORRECT option:
+#### For messaging.send — ALWAYS use the `useMessaging` hook:
+`useMessaging` returns a `[send, { enabled, loading, error }]` tuple. The `send` function is the imperative call wrapped with React state + typed errors. ALWAYS use the hook — do NOT call `capabilities.messaging.send(...)` directly from `useCapabilities()`. The hook is the canonical pattern: state management (`enabled`/`loading`) + typed errors (`error`) + correct payload shape (`{ kind, body }` with the `kind` discriminator). Wire send buttons to `disabled={!enabled || loading}` — the `enabled` flag pre-empts the silent `no_conversation` case without declaring `context:read`. See the snippet below for the full error-handling surface (actionable codes vs. host-handled codes).
+
+#### For identity.extend — CHOOSE the correct option:
 - **`useExtendIdentity(handler)`** — synchronous hook, fires only once at initial login. ALWAYS use for known-at-login enrichment.
 - **`capabilities.identity.extend(patch)`** — imperative call via `useCapabilities()`, fires post-login (after async verification, webhook callbacks, user-triggered flows). Re-signs the JWT and broadcasts `identity:refresh`.
 
@@ -113,6 +118,15 @@ import { useActivityEvent } from '@stackable-labs/sdk-extension-react'
 useActivityEvent('product_view', (event) => {
   console.log('Activity:', event.eventName, event.data)
 })
+```
+
+```tsx
+// messaging.send — use useMessaging hook (returns [send, { enabled, loading, error }] tuple)
+import { useMessaging } from '@stackable-labs/sdk-extension-react'
+
+// manifest.json: { "permissions": ["messaging:send"] }
+const [send, { enabled, loading, error }] = useMessaging()
+await send({ kind: 'text', body: 'Hello from the extension' })
 ```
 
 ```tsx
@@ -166,3 +180,4 @@ useIdentityEvent('refresh', (event) => {
 - For data/context/actions: confirm accessed via `useCapabilities()` hook
 - For events: confirm using `useIdentityEvent`, `useMessagingEvent`, or `useActivityEvent` hooks
 - For identity.extend: confirm using `useExtendIdentity` hook (login-time) and/or `capabilities.identity.extend(patch)` (imperative post-login)
+- For messaging.send: confirm using `useMessaging` hook

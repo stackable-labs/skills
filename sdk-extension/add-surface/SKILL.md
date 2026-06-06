@@ -42,7 +42,7 @@ alongside existing surfaces.
 Add the target to the `targets` array in `packages/extension/public/manifest.json`.
 Also add any required permissions based on the target-permission mapping:
 - `slot.header` → `context:read`
-- `slot.content` → `context:read`, `data:query`, `actions:toast`, `actions:invoke`
+- `slot.content` → `context:read`, `data:query`, `actions:toast`, `actions:invoke`, `messaging:send`
 - `slot.footer` → (none)
 - `slot.footer-links` → (none)
 

@@ -30,10 +30,6 @@ const Extension = () => (
 createExtension(() => <Extension />, { extensionId: 'my-extension' })
 ```
 
-## Surface component
-Wraps content for a target slot. The `id` must match a target in `manifest.json`.
-- `<Surface id="slot.content">...</Surface>`
-
 ## useCapabilities()
 Returns the capabilities object for calling host-mediated APIs.
 ```tsx
@@ -44,7 +40,7 @@ const capabilities = useCapabilities()
 // capabilities.actions.toast(payload)
 // capabilities.actions.invoke(action, payload?) — actions: newConversation, setConversationTags, setConversationFields, open, close, show, hide
 // capabilities.identity.extend(patch) — push enrichment claims to user.metadata + JWT custom_claims (imperative; for handler-style at login, use useExtendIdentity hook). Each patch key MUST be declared in manifest.identityClaims or the host filter drops it.
-// capabilities.messaging.send(payload) — post a message into the active conversation bound to this Instance. Requires messaging:send permission. Author label is admin-set per-Instance (instance.config.settings.messagingDisplayName) with extension.manifest.name fallback. For React state ([send, { loading, error, data }]), prefer the useMessaging hook.
+// capabilities.messaging.send(payload) — post a message into the active conversation bound to this Instance. Prefer the useMessaging hook instead. Requires messaging:send permission. Author label is admin-set per-Instance (instance.config.settings.messagingDisplayName) with extension.manifest.name fallback.
 ```
 
 ## useStore(store, selector?)
@@ -52,6 +48,17 @@ Subscribe to a shared store. Re-renders when the selected state changes.
 ```tsx
 const viewState = useStore(appStore, (s) => s.viewState)
 ```
+
+## createStore(initialState)
+Create a shared store for cross-surface state coordination.
+```tsx
+const appStore = createStore<AppState>({ viewState: { type: 'menu' } })
+```
+
+**Store\<T\> interface**
+- `get(): T` — read current state
+- `set(partial: Partial<T>): void` — merge partial state update
+- `subscribe(listener: (state: T) => void): () => void` — subscribe, returns unsubscribe fn
 
 ## useContextData()
 Reads host-provided context including extension settings. Returns `{ loading, customerId, customerEmail, messaging, settings, ... }`. `messaging.conversationId` is the active Messaging conversation ID (or `null` until one exists).
@@ -79,39 +86,48 @@ Returns extension-level context.
 const { extensionId } = useExtension()
 ```
 
-## createStore(initialState)
-Create a shared store for cross-surface state coordination.
+## useEvent(eventType, handler)
+Generic cross-domain event hook (should not be used unless absolutely required). Subscribe to any event using fully-qualified event types.
+- `eventType: EventType` — fully-qualified (e.g., `'activity:product_view'`, `'identity:login'`, `'messaging:postback'`)
+- Domain wildcard (e.g., `'activity'`) receives all events in that domain
+- `handler: (event: BaseEvent) => void`
+
 ```tsx
-const appStore = createStore<AppState>({ viewState: { type: 'menu' } })
+useEvent('activity', (event) => {
+  console.log('Activity:', event.data)
+})
 ```
 
-### Store\<T\> interface
-- `get(): T` — read current state
-- `set(partial: Partial<T>): void` — merge partial state update
-- `subscribe(listener: (state: T) => void): () => void` — subscribe, returns unsubscribe fn
+## useMessaging()
+Send messages into the active conversation bound to this Instance. Wraps the `messaging.send` capability with React state, tracking `enabled` / `loading` / `error` / `data`. Returns a tuple `[send, state]` so callers can rename `send` when the hook is used multiple times in one component. Requires `messaging:send` permission. The author label rendered above outbound messages is set per-Instance by the admin (Instance settings `messagingDisplayName`); falls back to `extension.manifest.name` when blank.
 
-## useIdentityEvent(eventType, handler)
-Subscribe to identity events pushed from the host via the framework. Requires `events:identity` permission and matching entries in manifest `events` array.
-- `eventType: 'login' | 'logout' | 'refresh' | 'expired'`
-- `handler: (event: IdentityEvent) => void`
-- `IdentityEvent: { eventName: IdentityEventType, data: { state: IdentityState, timestamp: string } }`
-- `IdentityState: { authenticated: boolean, user: UserIdentity | null, expiresAt?: string }`
+- **Returns:** `readonly [send, { enabled, loading, error, data }]`
+- **`send(payload: SendMessagePayload): Promise<SendMessageResponse | null>`** — returns the response on success; throws on **actionable** errors; resolves to `null` on host-handled errors (SDK logs a breadcrumb, host surfaces remediation)
+- **`enabled: boolean`** — advisory; `true` when an active conversation exists. Permission-free (no `context:read` needed). Wire to button `disabled` to pre-empt the silent `no_conversation` case. Starts `false`; flips reactively via host-pushed availability events.
+- **`loading: boolean`** — true while a call is in flight (matches `useContextData`'s `loading` for SDK-wide consistency)
+- **`data: SendMessageResponse | null`** — `{ messageId, receivedAt }` from last successful send
+- **`error: SendMessageActionableErrorCode | null`** — one of `invalid_message` / `rate_limited` / `upstream_error` after a failed send. Host-handled codes (`no_conversation` / `reauth_required` / `forbidden`) never surface here.
+
+Payload is discriminated by `kind`: `'text'` / `'image'` / `'file'` / `'carousel'`. See the `messaging.send` capability section for the full payload table + action types.
 
 ```tsx
-// manifest events: ["identity:login", "identity:logout", "identity:refresh"]
-useIdentityEvent('login', (event) => {
-  // event.data.state.user.metadata is populated with any enrichment from sibling
-  // extensions with identity:extend (declared in their manifest.identityClaims)
-  console.log('User logged in:', event.data.state.user?.email, event.data.state.user?.metadata)
-})
-useIdentityEvent('logout', () => {
-  console.log('User logged out')
-})
-// identity:refresh fires after any extension calls capabilities.identity.extend({...}).
-// Listen here to react to post-login enrichment (verification, tier upgrades, etc.).
-useIdentityEvent('refresh', (event) => {
-  console.log('Identity refreshed — metadata:', event.data.state.user?.metadata)
-})
+import { useMessaging } from '@stackable-labs/sdk-extension-react'
+
+const [send, { enabled, loading, error }] = useMessaging()
+
+const onApprove = async () => {
+  try {
+    await send({ kind: 'text', body: 'Approved ✓' })
+  } catch {
+    // error holds the typed SendMessageActionableErrorCode
+  }
+}
+
+return (
+  <button disabled={!enabled || loading} onClick={onApprove}>
+    Approve
+  </button>
+)
 ```
 
 ## useMessagingEvent(eventType, handler)
@@ -153,15 +169,27 @@ useActivityEvent('product_view', (event) => {
 })
 ```
 
-## useEvent(eventType, handler)
-Generic cross-domain event hook (should not be used unless absolutely required). Subscribe to any event using fully-qualified event types.
-- `eventType: EventType` — fully-qualified (e.g., `'activity:product_view'`, `'identity:login'`, `'messaging:postback'`)
-- Domain wildcard (e.g., `'activity'`) receives all events in that domain
-- `handler: (event: BaseEvent) => void`
+## useIdentityEvent(eventType, handler)
+Subscribe to identity events pushed from the host via the framework. Requires `events:identity` permission and matching entries in manifest `events` array.
+- `eventType: 'login' | 'logout' | 'refresh' | 'expired'`
+- `handler: (event: IdentityEvent) => void`
+- `IdentityEvent: { eventName: IdentityEventType, data: { state: IdentityState, timestamp: string } }`
+- `IdentityState: { authenticated: boolean, user: UserIdentity | null, expiresAt?: string }`
 
 ```tsx
-useEvent('activity', (event) => {
-  console.log('Activity:', event.data)
+// manifest events: ["identity:login", "identity:logout", "identity:refresh"]
+useIdentityEvent('login', (event) => {
+  // event.data.state.user.metadata is populated with any enrichment from sibling
+  // extensions with identity:extend (declared in their manifest.identityClaims)
+  console.log('User logged in:', event.data.state.user?.email, event.data.state.user?.metadata)
+})
+useIdentityEvent('logout', () => {
+  console.log('User logged out')
+})
+// identity:refresh fires after any extension calls capabilities.identity.extend({...}).
+// Listen here to react to post-login enrichment (verification, tier upgrades, etc.).
+useIdentityEvent('refresh', (event) => {
+  console.log('Identity refreshed — metadata:', event.data.state.user?.metadata)
 })
 ```
 
@@ -208,38 +236,9 @@ const handleExtend = useCallback<ExtendIdentityHandler>((claims) => ({
 useExtendIdentity(handleExtend)
 ```
 
-## Identity via context.read()
+**Identity via context.read()**
 Identity state is available in the `context.read()` response as an `identity` field. Requires `context:read` permission (no separate identity permission needed).
 ```tsx
 const context = await capabilities.context.read()
 // context.identity — { authenticated, user, expiresAt? }
-```
-
-## useMessaging()
-Send messages into the active conversation bound to this Instance. Wraps the `messaging.send` capability with React state, tracking `loading` / `error` / `data`. Returns a tuple `[send, state]` so callers can rename `send` when the hook is used multiple times in one component. Requires `messaging:send` permission. The author label rendered above outbound messages is set per-Instance by the admin (Instance settings `messagingDisplayName`); falls back to `extension.manifest.name` when blank.
-
-- **Returns:** `readonly [send, { loading, error, data }]`
-- **`send(payload: SendMessagePayload): Promise<SendMessageResponse | null>`** — returns the response on success; throws on **actionable** errors; resolves to `null` on host-handled errors (SDK logs a breadcrumb, host surfaces remediation)
-- **`loading: boolean`** — true while a call is in flight (matches `useContextData`'s `loading` for SDK-wide consistency)
-- **`data: SendMessageResponse | null`** — `{ messageId, receivedAt }` from last successful send
-- **`error: SendMessageActionableErrorCode | null`** — one of `invalid_message` / `rate_limited` / `upstream_error` after a failed send. Host-handled codes (`no_conversation` / `reauth_required` / `forbidden`) never surface here.
-
-Payload is discriminated by `kind`: `'text'` / `'image'` / `'file'` / `'carousel'`. See the `messaging.send` capability section for the full payload table + action types.
-
-```tsx
-import { useMessaging, useContextData } from '@stackable-labs/sdk-extension-react'
-
-const { messaging } = useContextData()
-const [send, { loading, error }] = useMessaging()
-
-// Proactive gate: skip the call when there's no conversation
-const canSend = !!messaging?.conversationId
-
-const onApprove = async () => {
-  try {
-    await send({ kind: 'text', body: 'Approved ✓' })
-  } catch {
-    // error holds the typed SendMessageActionableErrorCode
-  }
-}
 ```

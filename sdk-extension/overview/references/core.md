@@ -31,6 +31,11 @@
 - Always check the `loading` flag before using context values
 - Context is only available when the host provides it (e.g., when viewing a ticket)
 
+### `messaging.send` resolves to null without throwing
+- The host silently handles `no_conversation` / `reauth_required` / `forbidden` — `send()` returns null and `error` stays unset on these codes
+- These are operational/admin concerns (no active conversation, instance disconnected from messaging, permission revoked) — surfaced to admins via dashboard remediation UI, not user-actionable from the extension
+- Actionable codes (`invalid_message`, `rate_limited`, `upstream_error`) DO populate `error` and throw — handle in UI
+
 ## Best Practices
 
 ### Performance
