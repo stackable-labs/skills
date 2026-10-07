@@ -112,6 +112,7 @@ Trigger framework-defined actions (e.g., open a new conversation, set conversati
   - `'setConversationTags'` — set tags on the current/next conversation
   - `'setConversationFields'` — set custom fields on the current/next conversation
   - `'open'` / `'close'` / `'show'` / `'hide'` — control the Zendesk messenger widget
+- **Host-defined actions:** a host app can serve its own actions beyond these (e.g. agnoStack's `'catalog.item.setAttributes'`); `action` accepts any string, and the host's docs list what it serves. A host that does not serve an action rejects the call.
 
 ```tsx
 // New conversation with tags and fields
