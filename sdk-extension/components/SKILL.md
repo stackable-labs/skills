@@ -55,7 +55,7 @@ Allowed attributes: `variant`, `size`, `disabled`, `onClick`, `type`, `className
 Allowed attributes: `checked`, `onChange`, `disabled`, `className`, `id`
 
 ### `<ui.Input>` (`ui-input`)
-Allowed attributes: `type`, `placeholder`, `value`, `onChange`, `disabled`, `className`, `id`
+Allowed attributes: `type`, `placeholder`, `value`, `defaultValue`, `onChange`, `disabled`, `className`, `id`
 
 ### `<ui.Label>` (`ui-label`)
 Allowed attributes: `htmlFor`, `className`
